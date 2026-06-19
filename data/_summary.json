@@ -1,0 +1,135 @@
+{
+  "v01": {
+    "label": "v01",
+    "folder": "v01-mvp-baseline",
+    "entities": 754,
+    "relationships": 234,
+    "claims": 596,
+    "sections": 0,
+    "dropped": 28,
+    "isolated": 291,
+    "rel_type_count": 82,
+    "entity_types": {
+      "Numeric": 275,
+      "Concept": 345,
+      "Product": 74,
+      "Date": 3,
+      "Condition": 36,
+      "Org": 11,
+      "Person": 10
+    },
+    "claim_types": {
+      "(none)": 596
+    },
+    "doc_anchored_claims": 102
+  },
+  "v02": {
+    "label": "v02",
+    "folder": "v02-quality-baseline",
+    "entities": 921,
+    "relationships": 550,
+    "claims": 378,
+    "sections": 22,
+    "dropped": 182,
+    "isolated": 275,
+    "rel_type_count": 12,
+    "entity_types": {
+      "Numeric": 327,
+      "Condition": 143,
+      "Concept": 351,
+      "Product": 69,
+      "Date": 17,
+      "Org": 8,
+      "Person": 6
+    },
+    "claim_types": {
+      "(none)": 378
+    },
+    "doc_anchored_claims": 34
+  },
+  "v03": {
+    "label": "v03",
+    "folder": "v03-quality-baseline",
+    "entities": 1037,
+    "relationships": 787,
+    "claims": 642,
+    "sections": 22,
+    "dropped": 39,
+    "isolated": 148,
+    "rel_type_count": 12,
+    "entity_types": {
+      "Numeric": 361,
+      "Condition": 294,
+      "Concept": 264,
+      "Product": 93,
+      "Org": 12,
+      "Person": 10,
+      "Date": 3
+    },
+    "claim_types": {
+      "(none)": 642
+    },
+    "doc_anchored_claims": 44
+  },
+  "v05": {
+    "label": "v05",
+    "folder": "v05-quality-baseline",
+    "entities": 1113,
+    "relationships": 744,
+    "claims": 937,
+    "sections": 36,
+    "dropped": 0,
+    "isolated": 121,
+    "rel_type_count": 13,
+    "entity_types": {
+      "Numeric": 233,
+      "Condition": 312,
+      "Product": 60,
+      "Person": 9,
+      "Code": 203,
+      "Concept": 288,
+      "Org": 8
+    },
+    "claim_types": {
+      "정의·범위": 379,
+      "면책": 77,
+      "지급조건": 230,
+      "의무": 35,
+      "납입·환급": 19,
+      "기타": 110,
+      "해지·실효": 87
+    },
+    "doc_anchored_claims": 0
+  },
+  "v06": {
+    "label": "v06",
+    "folder": "v06-quality-baseline",
+    "entities": 1120,
+    "relationships": 1591,
+    "claims": 1016,
+    "sections": 36,
+    "dropped": 0,
+    "isolated": 19,
+    "rel_type_count": 13,
+    "entity_types": {
+      "Numeric": 231,
+      "Condition": 349,
+      "Concept": 266,
+      "Product": 63,
+      "Code": 200,
+      "Org": 8,
+      "Person": 2,
+      "Date": 1
+    },
+    "claim_types": {
+      "기타": 124,
+      "정의·범위": 284,
+      "지급조건": 369,
+      "면책": 66,
+      "의무": 43,
+      "납입·환급": 26,
+      "해지·실효": 104
+    },
+    "doc_anchored_claims": 0
+  }
+}
