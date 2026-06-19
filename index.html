@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
 <title>doc2graph — 버전 변천사 보고서</title>
+<!-- 테마 조기 적용: 본문 렌더 전에 data-theme 설정해 깜빡임(FOUC) 방지 -->
+<script>try{if(localStorage.getItem("report-theme")==="dark")document.documentElement.setAttribute("data-theme","dark");}catch(e){}</script>
 <style>
   :root{
     --bg:#fafafa; --panel:#fff; --ink:#1d1f23; --mut:#6b7280; --line:#e5e7eb;
@@ -14,6 +16,28 @@
     --Condition:#ffb74d; --Numeric:#90a4ae; --Date:#a1887f; --Code:#9ccc65;
     --Claim:#f06292; --Document:#455a64;
   }
+  /* ── 다크 테마: 변수 재정의 + 하드코딩 색 보정 ── */
+  :root[data-theme="dark"]{
+    --bg:#0f1115; --panel:#1a1d23; --ink:#e7e9ee; --mut:#9aa3af; --line:#2b303a;
+    --accent:#6aa8ff; --accent-soft:#1c2740;
+  }
+  [data-theme="dark"] th{background:#22262e}
+  [data-theme="dark"] .grid3 .col-prob{background:#2a1a1d}
+  [data-theme="dark"] .grid3 .col-fix{background:#172230}
+  [data-theme="dark"] .grid3 .col-res{background:#15251b}
+  [data-theme="dark"] .example{background:#14171c}
+  [data-theme="dark"] .detail .ev{background:#14171c;color:#c7cdd6;border-left-color:#2b303a}
+  [data-theme="dark"] code{background:#22262e;color:#e7e9ee}
+  [data-theme="dark"] .note{background:#2a2310;border-color:#5a4a14;color:#d6c98a}
+  [data-theme="dark"] section.hero{background:linear-gradient(135deg,#161c2b,#13151a);border-color:#2a3550}
+  [data-theme="dark"] .hero-note{background:#15181d;border-color:#2f3a5a}
+  [data-theme="dark"] nav.toc{background:rgba(16,18,22,.9)}
+  [data-theme="dark"] .pipe .step.retired{background:#14171c}
+  [data-theme="dark"] .btn,[data-theme="dark"] .controls .btn{background:#22262e;color:var(--ink);border-color:var(--line)}
+  [data-theme="dark"] .controls input[type=text]{background:#14171c;color:var(--ink)}
+  [data-theme="dark"] .ttag-llm{background:#2a1f4d;color:#c4b5fd;border-color:#4c3a86}
+  [data-theme="dark"] .ttag-eye{background:#0c2a3f;color:#7dd3fc;border-color:#1e4a66}
+  [data-theme="dark"] .ttag-mech{background:#1e242e;color:#9aa3af;border-color:#2b303a}
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.6 -apple-system,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;
        color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
@@ -99,6 +123,12 @@
   .muted{color:var(--mut)}
   .note{font-size:12px;color:var(--mut);background:#fffbeb;border:1px solid #fde68a;border-radius:8px;
         padding:8px 12px;margin-top:10px}
+  /* 평가 방법 채점-주체 태그 */
+  .ttag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:10px;
+        margin-left:6px;vertical-align:middle}
+  .ttag-llm{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe}
+  .ttag-eye{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
+  .ttag-mech{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0}
   /* 결론(맨 위 요약) hero */
   section.hero{margin-top:20px;background:linear-gradient(135deg,#f5f8ff,#fafafa);
         border:1px solid #dbe4ff;border-radius:12px;padding:20px 22px;box-shadow:0 2px 10px rgba(37,99,235,.06)}
@@ -109,6 +139,11 @@
   .hero-pt .hk{font-weight:700;color:var(--accent);font-size:12.5px}
   .hero-pt .hv{color:var(--ink)}
   @media(max-width:560px){.hero-pt{grid-template-columns:1fr;gap:1px}}
+  .hero-note{margin-top:16px;padding:10px 13px;background:var(--panel);border:1px dashed #c7d2fe;
+        border-radius:8px;font-size:12.5px;line-height:1.55;color:#475569}
+  .hero-note .off-pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.03em;
+        padding:1px 8px;border-radius:10px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;margin:0 2px}
+  .hero-note .note-cav{display:block;margin-top:5px;color:var(--mut);font-size:11.5px}
   /* 공통 파이프라인 — 단계 카드 가로 흐름 */
   .pipe{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
   .pipe .step{flex:1 1 150px;min-width:140px;background:var(--panel);border:1px solid var(--line);
@@ -137,6 +172,7 @@
   <a href="#evolution">그래프 진화</a>
   <a href="#decisions">결정 로그</a>
   <a href="#tests">테스트 방법</a>
+  <a href="#" id="themeToggle" style="margin-left:auto" title="다크/라이트 전환">🌙 다크</a>
 </nav>
 
 <main>
@@ -144,12 +180,12 @@
   <section id="summary" class="hero">
     <div class="hero-lead" id="heroLead"></div>
     <div class="hero-points" id="heroPoints"></div>
+    <div class="hero-note" id="heroNote"></div>
   </section>
 
   <!-- 파이프라인 -->
   <section id="pipeline">
     <h2>공통 파이프라인</h2>
-    <p class="muted">전 버전이 공유하는 흐름. 버전별 변화는 아래 "버전 변천사"에서.</p>
     <div class="pipe" id="pipeFlow"></div>
   </section>
 
@@ -247,6 +283,8 @@ if(R.summary){
   document.getElementById("heroLead").innerHTML = R.summary.lead;
   document.getElementById("heroPoints").innerHTML = (R.summary.points||[]).map(p=>
     `<div class="hero-pt"><span class="hk">${esc(p.k)}</span><span class="hv">${esc(p.v)}</span></div>`).join("");
+  const hn = document.getElementById("heroNote");
+  if(R.summary.note) hn.innerHTML = R.summary.note; else hn.style.display = "none";
 }
 
 document.getElementById("pipeFlow").innerHTML = R.pipeline.map((p,i)=>{
@@ -392,9 +430,17 @@ document.getElementById("evoTable").innerHTML =
 /* ---------- 결정 로그 / 테스트 ---------- */
 document.getElementById("decList").innerHTML = R.decisions.map(d=>
   `<details><summary>${esc(d.title)}</summary><p class="muted" style="margin:8px 0 2px">${esc(d.detail)}</p></details>`).join("");
-document.getElementById("testList").innerHTML = R.tests.map(t=>
-  `<div class="card" style="margin-top:10px"><b>${esc(t.name)}</b> &nbsp;<code>${esc(t.file)}</code>
-   <p class="muted" style="margin:6px 0 0">${esc(t.desc)}</p></div>`).join("");
+const TTAG = {           // 채점 주체 태그(라벨·클래스)
+  "LLM-judge": ["ttag-llm",  "LLM-judge"],
+  "육안":      ["ttag-eye",  "사람 육안"],
+  "기계":      ["ttag-mech", "기계·결정적"],
+};
+document.getElementById("testList").innerHTML = R.tests.map(t=>{
+  const tg = TTAG[t.type];
+  const badge = tg ? `<span class="ttag ${tg[0]}">${tg[1]}</span>` : "";
+  return `<div class="card" style="margin-top:10px"><b>${esc(t.name)}</b>${badge} &nbsp;<code>${esc(t.file)}</code>
+   <p class="muted" style="margin:6px 0 0">${esc(t.desc)}</p></div>`;
+}).join("");
 
 /* ============================================================
  *  그래프 뷰어
@@ -493,7 +539,7 @@ function draw(){
   const data = {nodes:new vis.DataSet(visNodes), edges:new vis.DataSet(visEdges)};
   // forceAtlas2Based = 대형 그래프용 솔버. avoidOverlap 으로 노드 겹침 회피 → 연결된 것끼리 뭉치고 떨어져 보임.
   const options = {
-    nodes:{shape:"dot", size:9, font:{size:11, color:"#222", face:"Segoe UI"}, borderWidth:1},
+    nodes:{shape:"dot", size:9, font:{size:11, color: isDark()?"#e7e9ee":"#222", face:"Segoe UI"}, borderWidth:1},
     edges:{arrows:{to:{enabled:true,scaleFactor:0.4}}, font:{size:9,color:"#94a3b8",strokeWidth:2},
            smooth: focusId ? {type:"continuous"} : false, width:0.6},
     groups: groupsOption,
@@ -586,6 +632,23 @@ elSearch.onkeydown = e=>{
 /* 초기 렌더 — 레이아웃이 잡힌 뒤(컨테이너 높이 확정) 그려야 캔버스가 0높이로 안 잡힘 */
 buildTypeFilters();
 requestAnimationFrame(()=>requestAnimationFrame(draw));
+
+/* ---------- 다크/라이트 테마 토글 ----------
+ * data-theme 속성으로 CSS 변수를 바꾸고 localStorage 에 저장.
+ * 그래프(vis-network)는 캔버스라 CSS 가 안 먹으므로 노드 라벨 색만 setOptions 로 따로 갱신. */
+function isDark(){ return document.documentElement.getAttribute("data-theme")==="dark"; }
+function applyGraphTheme(){
+  if(network) network.setOptions({ nodes:{ font:{ color: isDark()?"#e7e9ee":"#222" } } });
+}
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  const btn = document.getElementById("themeToggle");
+  if(btn) btn.textContent = t==="dark" ? "☀️ 라이트" : "🌙 다크";
+  try{ localStorage.setItem("report-theme", t); }catch(e){}
+  applyGraphTheme();
+}
+document.getElementById("themeToggle").onclick = e=>{ e.preventDefault(); applyTheme(isDark() ? "light" : "dark"); };
+applyTheme(isDark() ? "dark" : "light");   // head 스크립트가 이미 설정한 값과 버튼 라벨 동기화
 </script>
 </body>
 </html>

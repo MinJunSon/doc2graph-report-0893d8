@@ -13,7 +13,7 @@
 window.REPORT = {
   meta: {
     title: "doc2graph — 버전 변천사 보고서 (v01 → v06)",
-    doc: "대상 문서: MG손해보험 무배당 mg뉴파워보장보험 약관 (mg_new_power, 18p)",
+    doc: "대상 문서: MG손해보험 무배당 mg뉴파워보장보험 약관 (mg_new_power, 97p)",
   },
 
   /* 맨 위 블록 — 이 프로젝트로 '무엇을 만들려는가'(목적)만 담는다.
@@ -24,13 +24,19 @@ window.REPORT = {
       "<b>만들고 싶은 것</b> — 보통의 RAG 는 문서를 잘게 잘라 질문과 비슷한 조각을 찾아옵니다. " +
       "그래서 <i>여러 사실을 이어 붙여야 답이 나오는</i> 질문에는 약합니다. 우리가 만들려는 건 " +
       "문서 속 사실을 <b>Entity·Relationship·Claim</b> 으로 뽑아 서로 <b>연결</b>한, " +
-      "여러 단계를 따라가며 추론하는(멀티홉) <b>지식그래프</b> — RAG 를 한 단계 끌어올리는 ‘쓸만한’ 그래프입니다.",
+      "<b>multi-hop</b> 추론이 가능한 <b>지식그래프(KG)</b> — RAG 를 한 단계 끌어올리는 ‘쓸만한’ 그래프입니다.",
     points: [
       { k: "무엇을", v: "문서 한 건을 노드(개념·수치·코드) + 관계 + 근거 있는 claim 으로 이뤄진 그래프로." },
       { k: "어떻게", v: "무거운 프레임워크 없이 직접 구현 · 닫힌 스키마로 질의 가능하게 · 모든 노드·엣지에 원문 근거(evidence) 보존." },
       { k: "어디로", v: "지금은 약관 1건이지만, 다음 목표는 여러 문서·여러 도메인으로 확장하는 것(North Star)." },
       { k: "지금",   v: "버전을 거치며 계속 고도화 중 — 아래에서 v01 → v06 의 변화와 현재 그래프를 직접 볼 수 있습니다." },
     ],
+    /* claim on/off 정책 명시 (코드 토글은 추후). 그래프 연결성과 무관해 비용 절감용으로 끔. */
+    note:
+      "<b>claim 추출</b> <span class=\"off-pill\">현재 OFF</span> — claim(면책·지급조건·정의 같은 산문 사실)은 " +
+      "그래프 <b>연결성에는 영향이 없어</b>, 지금 단계에서는 LLM 비용을 아끼려 끈 채로 진행합니다. " +
+      "필요할 때 다시 <b>ON</b> 으로 켤 수 있습니다(추출 2번째 패스 토글). " +
+      "<span class=\"note-cav\">※ 아래 그래프·claim_type 표는 claim 을 켠 v06 기준입니다.</span>",
   },
 
   /* 전 버전 공통 파이프라인 (단계별 1줄) ----------------------------------- */
@@ -143,7 +149,7 @@ window.REPORT = {
         "별표/외부표 참조(#21)는 스키마 빈틈으로 보류(제2조·MH001·제8조 3회 등장)",
       ],
       eval:
-        "26문항 회귀 = PASS 17(깨끗 13 + 개선 4) + 데이터로 해결 1(Q-005) + PARTIAL 4 + 회귀 2 + 정보없음 2. 여러 단계를 따라가는 멀티홉 답변이 뚜렷이 개선됐다.",
+        "26문항 회귀 = PASS 17(깨끗 13 + 개선 4) + 데이터로 해결 1(Q-005) + PARTIAL 4 + 회귀 2 + 정보없음 2. multi-hop 답변이 뚜렷이 개선됐다.",
     },
     {
       id: "v06",
@@ -151,7 +157,7 @@ window.REPORT = {
       date: "2026-06-18 ~ 06-19",
       tag: "topology fix (스키마 변화 없음)",
       goal:
-        "추출 품질이 아니라 그래프 '형태'를 고친다. v0.5 그래프가 457개의 섬으로 쪼개져 있었다 — 노드 82%가 연결이 1개 이하, 가장 큰 덩어리가 전체의 21.6%뿐. 여러 단계를 따라가는 검색(멀티홉)이 섬을 못 건너는 병목이다. 측정으로 진짜 원인을 확정하고 딱 둘만 고쳤다.",
+        "추출 품질이 아니라 그래프 '형태'를 고친다. v0.5 그래프가 457개의 섬(connected component)으로 쪼개져 있었다 — 노드 82%가 degree ≤ 1, 가장 큰 connected component(LCC)가 전체의 21.6%뿐. multi-hop traversal 이 섬을 못 건너는 병목이다. 측정으로 진짜 원인을 확정하고 딱 둘만 고쳤다.",
       schema: [
         "스키마 변화 없음(Entity 8종·rel 13종·claim_type 7종 그대로). enum 에 손 안 댐.",
         "claim 의 '역할'을 고정 — 연결을 만들지 않는 참고용 잎(구조 엣지는 HAS_CLAIM 1종뿐).",
@@ -164,9 +170,9 @@ window.REPORT = {
         "측정 우선: _connectivity / _appendix_probe / _claim_audit 로 원인 확정 후에만 손댐 — 순진한 coverage 묶기(거대허브)·별표 regex 스파인(오버핏) 둘 다 시뮬레이션으로 걸러 폐기.",
       ],
       problems: [
-        "별표1(장해분류표)이 연결 246개짜리 초대형 허브 — 의미는 있으나 탐색 노이즈 우려. 필요하면 부위별 중간 카테고리로 쪼갤 수 있다.",
+        "별표1(장해분류표)이 degree 246 의 초대형 허브 — 의미는 있으나 traversal noise 우려. 필요하면 부위별 중간 카테고리로 쪼갤 수 있다.",
         "남은 고립 노드 ~140개: 별표 행 70개(위치 매칭 실패로 못 붙은 것) + 본문 70개(정의 용어가 claim 안에만 있고 엣지가 없음, 표가 아님).",
-        "현재 26문항은 키워드로 검색 시작점을 찍는 유형이라, '하나로 이어진 79%'의 진짜 가치(시작점을 몰라도 따라가는 탐색 견고성)는 이 세트만으로는 다 측정되지 않는다 — 탐색 부하 테스트 쿼리는 아직 안 만듦.",
+        "현재 26문항은 검색 시작점을 키워드로 찍는(entity-anchored) 유형이라, 'LCC 79%'의 진짜 가치(시작점을 몰라도 따라가는 traversal 견고성)는 이 세트만으로는 다 측정되지 않는다 — traversal-stress 쿼리는 아직 안 만듦.",
       ],
       eval:
         "26문항 회귀 = PASS 23 / PARTIAL 3 / FAIL 0 (v0.4 21/5/0). 새로 통과한 2개 모두 v0.6의 직접 성과 — MH001(뇌졸중→분류코드를 한 홉에 도달)·Q-005(소멸시효가 깔끔한 엣지로 연결). 남은 PARTIAL 3개는 연결성 문제가 아니라 본문 claim을 덜 뽑은 recall 갭(Q-006·Q-007·GS003).",
@@ -252,13 +258,13 @@ window.REPORT = {
         "Code 0→203(C-002 실측 해결), Date 3→0(흡수)",
         "dropped 39→0(dangling 완전 해소), claim 642→937(+claim_type 7종 분류)",
         "coverage 22→36, rel_type 12→13(참조한다 추가), 고립 148→121",
-        "평가: v0.4 21 PASS / 5 PARTIAL / 0 FAIL(FAIL 처음 0) → v0.5 구조개편 후 멀티홉/traversal 답변성↑",
+        "평가: v0.4 21 PASS / 5 PARTIAL / 0 FAIL(FAIL 처음 0) → v0.5 구조개편 후 multi-hop/traversal 답변성↑",
         "⚠ 잔존: 별표 분류표 질병↔코드 링크 미연결(고립 121의 절반) · 2-16 헤더 parse gap · 재추출로 Q-001·Q-007 claim 확률적 소실(회귀 2)",
       ],
       example: {
         title: "분류코드 I21 (급성심근경색증)",
         before: "Numeric으로 인식돼 'I21'·'21' 등 여러 노드로 분산 — 코드 질의 불가 (C-002)",
-        after: "Code 타입 단일 노드 I21 → 질병 -[분류번호]→ I21 멀티홉 질의 가능",
+        after: "Code 타입 단일 노드 I21 → 질병 -[분류번호]→ I21 multi-hop 질의 가능",
       },
     },
     {
@@ -266,7 +272,7 @@ window.REPORT = {
       commit: "523b759 (06-19)",
       headline: "그래프를 '하나의 대륙'으로 — claim에 갇힌 연결 회수 + 별표 표 행 연결",
       problems: [
-        "그래프가 457개의 섬으로 쪼개짐 — 노드 82%가 연결 1개 이하, 가장 큰 덩어리가 전체의 21.6%뿐. 여러 단계를 따라가는(멀티홉) 질의가 섬을 못 건넌다",
+        "그래프가 457개의 섬(connected component)으로 쪼개짐 — 노드 82%가 degree ≤ 1, 가장 큰 connected component(LCC)가 전체의 21.6%뿐. multi-hop traversal 질의가 섬을 못 건넌다",
         "관계가 돼야 할 것이 claim 안에 갇힘 — claim 937개 > 관계 744개. 관계·참조 형태의 claim 182개(19%)가 원래 엣지였어야 함. 별표 연결도 엣지 34 vs claim 69로, 2/3이 claim에 묶여 있었다",
         "별표 표 행(전체 별표의 67%)이 본문과 끊긴 별개의 대륙 — 헤더 【별표N】이 자기 행들을 거느리지 못함(소속 정보가 'appendix'로 뭉개져 load 단계에선 복구 불가)",
       ],
@@ -277,10 +283,10 @@ window.REPORT = {
         "측정 먼저 — coverage 묶기(거대허브 재발)·별표 regex 스파인(오버핏)은 시뮬레이션으로 미리 폐기",
       ],
       results: [
-        "섬 457→165개, 가장 큰 덩어리 21.6%→79.2%(1120노드 중 887개) = 그래프가 사실상 하나로 이어짐",
-        "관계 744→1591(2-패스 +108, 별표 링크 +766 등), 완전 고립(연결 0) 117→19개, 연결 1개 이하 76%→39%",
+        "섬(connected component) 457→165개, LCC 21.6%→79.2%(1120노드 중 887개) = 그래프가 사실상 하나로 이어짐",
+        "관계 744→1591(2-패스 +108, 별표 링크 +766 등), 완전 고립(degree 0) 117→19개, degree ≤ 1 76%→39%",
         "claim 937→1016이나 분포 재편: 정의·범위 379→284(cross-ref가 엣지로 빠짐) · 지급조건 230→369(전용 claim 패스가 더 꼼꼼)",
-        "26문항 회귀 23 PASS / 3 PARTIAL / 0 FAIL(v0.4 21/5/0) — MH001·Q-005가 멀티홉/엣지로 승격되며 +2 PASS",
+        "26문항 회귀 23 PASS / 3 PARTIAL / 0 FAIL(v0.4 21/5/0) — MH001·Q-005가 multi-hop/엣지로 승격되며 +2 PASS",
         "⚠ 잔존: 별표1 deg 246 거대 허브 · 고립 ~140 · 키워드 앵커 회귀셋으로는 79% 연결성의 진짜 가치 미측정(traversal-stress 쿼리 숙제)",
       ],
       example: {
@@ -299,7 +305,7 @@ window.REPORT = {
     { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)" },
     { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)" },
     { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거" },
-    { aspect: "연결성(연결요소)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·최대 21.6%(de-hub로 파편화 노출)", v06: "섬 165·최대 79.2%" },
+    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%" },
     { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0" },
   ],
 
@@ -333,25 +339,31 @@ window.REPORT = {
       detail: "노드·엣지마다 evidence(원문 인용)+page+chunk_id 가 sources_json 에 이미 들어 있어 근거(grounding) 요건을 충족한다. 별도 (:Chunk) 노드는 또 다른 허브만 만들 뿐이라 추가하지 않음." },
   ],
 
-  /* 테스트 방법 ----------------------------------------------------------- */
+  /* 테스트 방법.  type = 채점 주체 구분:
+   *   "육안"      = 사람이 직접 눈으로 판단
+   *   "LLM-judge" = LLM 이 채점 (LLM-as-a-judge)
+   *   "기계"      = 코드가 자동·결정적으로 측정/비교 (LLM 안 씀)            */
   tests: [
-    { name: "26문항 수동 Cypher 회귀",
+    { name: "26문항 수동 Cypher 회귀", type: "육안",
       file: "eval/manual_cypher_test.md (살아있는 정본)",
-      desc: "A·B(단순조회·조건정리)=오정보 0 감시 / C·D·E·F(비교·요약·확인불가·멀티홉)=전부 PASS 목표. 부재 판정은 entity+claim+edge 3중 검색 후에만." },
-    { name: "LLM-judge eval 5종",
+      desc: "A·B(단순조회·조건정리)=오정보 0 감시 / C·D·E·F(비교·요약·확인불가·multi-hop)=전부 PASS 목표. 부재 판정은 entity+claim+edge 3중 검색 후에만." },
+    { name: "직접 육안 검토 (수동 spot-check)", type: "육안",
+      file: "그래프 뷰어(report) · Neo4j Browser · resolved.json",
+      desc: "추출 결과를 사람이 직접 눈으로 확인 — 그래프 뷰어에서 노드·엣지·evidence 를 훑고, 의심 가는 조항을 원문과 대조해 환각·누락·오병합을 spot-check. 자동화가 못 잡는 '말이 되나'를 사람이 판단." },
+    { name: "LLM-judge eval 5종", type: "LLM-judge",
       file: "eval/01~05 폴더 README = 작업 지시서",
       desc: "노드 coverage / 관계 정확·귀속 / 내용 보존 / 근거 provenance / 노이즈. 결과는 YYYY-MM-DD__agent__*.md, synthesis 후 원인별 수정." },
-    { name: "gold 슬라이스 대조",
+    { name: "gold 슬라이스 대조", type: "육안",
       file: "eval/gold/제2조·제5조·제8조",
-      desc: "스키마-라이트 gold 를 한 조항씩 만들어 우리 그래프와 diff → recall 측정. 결론: 스키마는 충분, 병목은 recall." },
-    { name: "기계 불변식 게이트",
+      desc: "스키마-라이트 gold 를 한 조항씩 사람이 만들어 우리 그래프와 대조 → recall 측정. 결론: 스키마는 충분, 병목은 recall." },
+    { name: "기계 불변식 게이트", type: "기계",
       file: "eval/check_baseline.py",
       desc: "토큰 0 구조 지표 diff(Section/dropped/coverage/orphan/ACME 등)를 매 단계 검증. LLM 평가가 놓치는 구조 결함 포착." },
-    { name: "회귀 러너",
+    { name: "회귀 러너", type: "기계",
       file: "eval/run_eval.py",
       desc: "md 문항별 cypher 블록 파싱 → Neo4j 읽기전용 실행 → eval/_results.md 덤프. baseline 과 행 단위 비교." },
-    { name: "[v06] 연결성 진단 스위트",
+    { name: "[v06] 연결성 진단 스위트", type: "기계",
       file: "eval/_connectivity*.py · _appendix_probe.py · _claim_audit.py",
-      desc: "연결요소 수·degree 분포·고립률 측정(_connectivity), 순진한 fix 시뮬레이션(_connectivity_sim), 별표 행 고아 진단(_appendix_probe), 'claim이 연결을 먹는다' 확정(_claim_audit). 코드 수정 전 '측정 먼저' 게이트." },
+      desc: "connected component 수·degree 분포·고립률 측정(_connectivity), 순진한 fix 시뮬레이션(_connectivity_sim), 별표 행 고아 진단(_appendix_probe), 'claim이 연결을 먹는다' 확정(_claim_audit). 코드 수정 전 '측정 먼저' 게이트." },
   ],
 };
