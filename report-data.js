@@ -40,7 +40,7 @@ window.REPORT = {
     { stage: "1. parse",   what: "PDF → 구조화 텍스트" },
     { stage: "2. chunk",   what: "헤더·토큰 단위로 분할" },
     { stage: "3. extract", what: "LLM 추출: Entity·Relationship·Claim" },
-    { stage: "4. glean",   what: "놓친 것 2차 회수", retired: "v06 은퇴" },
+    { stage: "4. glean",   what: "놓친 것 2차 회수", retired: "2-패스에 통합" },
     { stage: "5. resolve", what: "병합·정규화 + 별표 표 행 연결" },
     { stage: "6. load",    what: "Neo4j 그래프 적재" },
   ],
@@ -78,7 +78,7 @@ window.REPORT = {
       date: "2026-06-11",
       tag: "닫힌 스키마 + 조항 구조",
       goal:
-        "선임 피드백(그래프 개선·질문기반 눈 검증)에 따라 품질 단계로 전환. queryable 한 그래프로.",
+        "품질 단계로 전환 — 그래프 개선·질문 기반 검증 피드백을 반영해 'queryable 한 그래프'를 목표로.",
       schema: [
         "Relationship open → closed enum 12종 (common 7 + insurance 5)",
         "온톨로지 외부화: ontologies/common.json + insurance.json",
@@ -145,7 +145,7 @@ window.REPORT = {
         "별표/외부표 참조(#21)는 스키마 빈틈으로 보류(제2조·MH001·제8조 3회 등장)",
       ],
       eval:
-        "26문항 회귀 = PASS깨끗 13 + PASS개선 4 + 데이터해결 1(Q-005) + PARTIAL 4 + 회귀 2 + 정보없음 2. 멀티홉/traversal 답변성 명확히 ↑.",
+        "26문항 회귀 = PASS 17(깨끗 13 + 개선 4) + 데이터로 해결 1(Q-005) + PARTIAL 4 + 회귀 2 + 정보없음 2. 여러 단계를 따라가는 멀티홉 답변이 뚜렷이 개선됐다.",
     },
     {
       id: "v06",
@@ -153,25 +153,25 @@ window.REPORT = {
       date: "2026-06-18 ~ 06-19",
       tag: "topology fix (스키마 변화 없음)",
       goal:
-        "추출 품질이 아니라 그래프 '형태'를 고친다. v0.5 그래프가 457개 섬으로 파편화(82%가 deg≤1, 최대 연결요소 21.6%) — traversal-RAG 의 상류 병목. 측정으로 진짜 원인을 확정하고 둘만 고침.",
+        "추출 품질이 아니라 그래프 '형태'를 고친다. v0.5 그래프가 457개의 섬으로 쪼개져 있었다 — 노드 82%가 연결이 1개 이하, 가장 큰 덩어리가 전체의 21.6%뿐. 여러 단계를 따라가는 검색(멀티홉)이 섬을 못 건너는 병목이다. 측정으로 진짜 원인을 확정하고 딱 둘만 고쳤다.",
       schema: [
         "스키마 변화 없음(Entity 8종·rel 13종·claim_type 7종 그대로). enum 에 손 안 댐.",
-        "claim 의 '역할'을 고정: 연결을 지지하지 않는 참고용 잎(structural edge = HAS_CLAIM 1종).",
-        "chunk 노드 안 만듦 — sources_json(노드/엣지별 evidence)이 이미 grounding 을 충족(Granter 'with chunks').",
+        "claim 의 '역할'을 고정 — 연결을 만들지 않는 참고용 잎(구조 엣지는 HAS_CLAIM 1종뿐).",
+        "chunk 노드는 만들지 않음 — 노드·엣지마다 evidence(원문 인용)가 sources_json 에 이미 있어 근거(grounding)는 충족된다.",
       ],
       changes: [
         "extract.py 2-패스: Pass1 Entity+Relationship(cross-ref 를 정의된다/참조한다 엣지로 명시 추출) → Pass2 Claim(ent+rel 보고 잔여 조건문만). claim 에 갇혔던 연결 182개 회수.",
         "resolve.py link_table_rows(): appendix 청크의 원문 【별표N】 마커를 검출해 표 행을 가장 가까운 별표에 포함한다로 기계 연결(766건). 표가 청크 넘기면 carry-forward, CJK 괄호로 오인 방지.",
-        "glean.py 은퇴 — 멀티패스가 타깃(항·호·표코드·수치연결)을 흡수. 26문항 회귀로 커버 확인 후 파이프라인에서 제외.",
+        "glean.py 제거 — 2-패스 추출이 그 역할(항·호·표코드·수치연결)을 직접 흡수. 26문항 회귀로 커버를 확인한 뒤 파이프라인에서 뺐다.",
         "측정 우선: _connectivity / _appendix_probe / _claim_audit 로 원인 확정 후에만 손댐 — 순진한 coverage 묶기(거대허브)·별표 regex 스파인(오버핏) 둘 다 시뮬레이션으로 걸러 폐기.",
       ],
       problems: [
-        "별표1(장해분류표) deg 246 거대 허브 — 의미는 있으나 traversal 노이즈 우려, 필요시 부위별 중간 카테고리로 분할.",
-        "남은 고립 ~140: appendix 70(위치매칭 실패 stragglers) + body 70(본문 정의용어 claim-only, 표 아님).",
-        "이 26문항은 키워드 앵커형 → 79% 단일 연결요소의 진짜 가치(미탐색 traversal 견고성)는 이 세트로 완전 측정 안 됨. traversal-stress 쿼리 미작성.",
+        "별표1(장해분류표)이 연결 246개짜리 초대형 허브 — 의미는 있으나 탐색 노이즈 우려. 필요하면 부위별 중간 카테고리로 쪼갤 수 있다.",
+        "남은 고립 노드 ~140개: 별표 행 70개(위치 매칭 실패로 못 붙은 것) + 본문 70개(정의 용어가 claim 안에만 있고 엣지가 없음, 표가 아님).",
+        "현재 26문항은 키워드로 검색 시작점을 찍는 유형이라, '하나로 이어진 79%'의 진짜 가치(시작점을 몰라도 따라가는 탐색 견고성)는 이 세트만으로는 다 측정되지 않는다 — 탐색 부하 테스트 쿼리는 아직 안 만듦.",
       ],
       eval:
-        "26문항 회귀 = PASS 23 / PARTIAL 3 / FAIL 0 (v0.4 21/5/0). +2 PASS 모두 v0.6 직접 성과 — MH001(I64∉뇌졸중 1-hop)·Q-005(소멸시효 깨끗한 edge). 잔여 PARTIAL 3은 연결성 아닌 본문 claim recall 갭(Q-006·Q-007·GS003).",
+        "26문항 회귀 = PASS 23 / PARTIAL 3 / FAIL 0 (v0.4 21/5/0). 새로 통과한 2개 모두 v0.6의 직접 성과 — MH001(뇌졸중→분류코드를 한 홉에 도달)·Q-005(소멸시효가 깔끔한 엣지로 연결). 남은 PARTIAL 3개는 연결성 문제가 아니라 본문 claim을 덜 뽑은 recall 갭(Q-006·Q-007·GS003).",
     },
   ],
 
@@ -268,19 +268,19 @@ window.REPORT = {
       commit: "523b759 (06-19)",
       headline: "그래프를 '하나의 대륙'으로 — claim에 갇힌 연결 회수 + 별표 표 행 연결",
       problems: [
-        "그래프가 457개 섬으로 파편화 — 82%가 deg≤1, 가장 큰 연결요소가 전체의 21.6%뿐. traversal형 질의가 섬을 못 건넌다",
-        "claim이 연결을 먹는다 — claim 937 > rel 744. 관계/참조 모양 claim 182개(19%)가 엣지였어야 함. 별표 연결이 엣지 34 vs claim 69로 2/3이 claim에 갇힘",
-        "별표 표 행(appendix 67%)이 본문과 끊긴 별개 대륙 — 헤더 【별표N】이 자기 행을 거느리지 못함(coverage_id가 'appendix'로 뭉개져 load 로는 복구 불가)",
+        "그래프가 457개의 섬으로 쪼개짐 — 노드 82%가 연결 1개 이하, 가장 큰 덩어리가 전체의 21.6%뿐. 여러 단계를 따라가는(멀티홉) 질의가 섬을 못 건넌다",
+        "관계가 돼야 할 것이 claim 안에 갇힘 — claim 937개 > 관계 744개. 관계·참조 형태의 claim 182개(19%)가 원래 엣지였어야 함. 별표 연결도 엣지 34 vs claim 69로, 2/3이 claim에 묶여 있었다",
+        "별표 표 행(전체 별표의 67%)이 본문과 끊긴 별개의 대륙 — 헤더 【별표N】이 자기 행들을 거느리지 못함(소속 정보가 'appendix'로 뭉개져 load 단계에선 복구 불가)",
       ],
       fixes: [
         "extract.py 2-패스 — Pass1 Entity+Relationship(cross-ref를 정의된다/참조한다 엣지로), Pass2 Claim(잔여 조건문만). claim 마지막 = 연결을 먼저 확보",
         "resolve.py link_table_rows() — appendix 원문 【별표N】 마커 검출해 표 행을 가장 가까운 별표에 포함한다로 기계 연결(766건 주입)",
-        "glean.py 은퇴(멀티패스가 흡수) · claim = 참고용 잎으로 역할 고정(구조 엣지는 HAS_CLAIM뿐)",
+        "glean.py 제거(2-패스가 역할 흡수) · claim = 참고용 잎으로 역할 고정(구조 엣지는 HAS_CLAIM뿐)",
         "측정 먼저 — coverage 묶기(거대허브 재발)·별표 regex 스파인(오버핏)은 시뮬레이션으로 미리 폐기",
       ],
       results: [
-        "섬(연결요소) 457→165, 가장 큰 연결요소 21.6%→79.2%(887/1120노드) = 그래프가 사실상 하나의 대륙으로",
-        "관계 744→1591(2-패스 +108, 별표 링크 +766 등), 완전고립(deg 0) 117→19, deg≤1 76%→39%",
+        "섬 457→165개, 가장 큰 덩어리 21.6%→79.2%(1120노드 중 887개) = 그래프가 사실상 하나로 이어짐",
+        "관계 744→1591(2-패스 +108, 별표 링크 +766 등), 완전 고립(연결 0) 117→19개, 연결 1개 이하 76%→39%",
         "claim 937→1016이나 분포 재편: 정의·범위 379→284(cross-ref가 엣지로 빠짐) · 지급조건 230→369(전용 claim 패스가 더 꼼꼼)",
         "26문항 회귀 23 PASS / 3 PARTIAL / 0 FAIL(v0.4 21/5/0) — MH001·Q-005가 멀티홉/엣지로 승격되며 +2 PASS",
         "⚠ 잔존: 별표1 deg 246 거대 허브 · 고립 ~140 · 키워드 앵커 회귀셋으로는 79% 연결성의 진짜 가치 미측정(traversal-stress 쿼리 숙제)",
@@ -300,12 +300,12 @@ window.REPORT = {
     { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)" },
     { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)" },
     { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)" },
-    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 은퇴" },
+    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거" },
     { aspect: "연결성(연결요소)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·최대 21.6%(de-hub로 파편화 노출)", v06: "섬 165·최대 79.2%" },
     { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0" },
   ],
 
-  /* 주요 결정 로그 (선임 점검용) ------------------------------------------ */
+  /* 주요 결정 로그 ------------------------------------------------------- */
   decisions: [
     { title: "도메인 전용 5타입 → 범용 7종 전환",
       detail: "Coverage/Term/Trigger/Exclusion/Amount 보험 전용 스키마는 overfit. 타입은 보험 '일반' 어휘로만, 문서값 하드코딩 0." },
@@ -331,8 +331,8 @@ window.REPORT = {
       detail: "표 행이 어느 별표 소속인지는 coverage_id='appendix'로 뭉개져 load 단계엔 정보가 없음. resolve 에서 청크 원문의 【별표N】 마커를 직접 검출(CJK 괄호로 조여 오인 방지)해 766건 기계 연결. 포함한다는 사전적 정의 그대로라 오버핏 아님." },
     { title: "[v06] 측정 먼저 — 순진한 fix·오버핏 fix 폐기",
       detail: "coverage 묶기는 시뮬레이션상 100% 블롭(거대허브 재발), 별표 regex 스파인은 이 문서 전용(다도메인 North Star 위배)이라 손대기 전에 폐기. _connectivity/_appendix_probe/_claim_audit 가 '진짜 원인=claim이 연결을 먹음'을 가리킨 뒤에만 코드 수정." },
-    { title: "[v06] chunk 노드 안 만듦 — sources_json 이 grounding",
-      detail: "노드/엣지마다 evidence(원문 인용)+page+chunk_id 가 sources_json 에 이미 있어 Granter 'with chunks' grounding 을 충족. 별도 (:Chunk) 노드는 또 다른 허브만 만들 뿐 — 추가하지 않음." },
+    { title: "[v06] chunk 노드는 만들지 않음 — sources_json 이 근거 역할",
+      detail: "노드·엣지마다 evidence(원문 인용)+page+chunk_id 가 sources_json 에 이미 들어 있어 근거(grounding) 요건을 충족한다. 별도 (:Chunk) 노드는 또 다른 허브만 만들 뿐이라 추가하지 않음." },
   ],
 
   /* 테스트 방법 ----------------------------------------------------------- */
