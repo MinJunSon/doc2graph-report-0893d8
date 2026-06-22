@@ -131,5 +131,28 @@
       "해지·실효": 104
     },
     "doc_anchored_claims": 0
+  },
+  "v07": {
+    "label": "v07",
+    "folder": "v07-quality-baseline",
+    "entities": 1410,
+    "relationships": 2015,
+    "claims": 0,
+    "sections": 36,
+    "dropped": 16,
+    "isolated": 83,
+    "rel_type_count": 13,
+    "entity_types": {
+      "Numeric": 308,
+      "Date": 9,
+      "Concept": 625,
+      "Product": 71,
+      "Person": 23,
+      "Condition": 146,
+      "Code": 202,
+      "Org": 26
+    },
+    "claim_types": {},
+    "doc_anchored_claims": 0
   }
 }

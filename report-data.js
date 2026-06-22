@@ -12,7 +12,7 @@
  * ==========================================================================*/
 window.REPORT = {
   meta: {
-    title: "doc2graph — 버전 변천사 보고서 (v01 → v06)",
+    title: "doc2graph — 버전 변천사 보고서 (v01 → v07)",
     doc: "대상 문서: MG손해보험 무배당 mg뉴파워보장보험 약관 (mg_new_power, 97p)",
   },
 
@@ -29,14 +29,14 @@ window.REPORT = {
       { k: "무엇을", v: "문서 한 건을 노드(개념·수치·코드) + 관계 + 근거 있는 claim 으로 이뤄진 그래프로." },
       { k: "어떻게", v: "무거운 프레임워크 없이 직접 구현 · 닫힌 스키마로 질의 가능하게 · 모든 노드·엣지에 원문 근거(evidence) 보존." },
       { k: "어디로", v: "지금은 약관 1건이지만, 다음 목표는 여러 문서·여러 도메인으로 확장하는 것(North Star)." },
-      { k: "지금",   v: "버전을 거치며 계속 고도화 중 — 아래에서 v01 → v06 의 변화와 현재 그래프를 직접 볼 수 있습니다." },
+      { k: "지금",   v: "버전을 거치며 계속 고도화 중 — 아래에서 v01 → v07 의 변화와 현재 그래프를 직접 볼 수 있습니다." },
     ],
     /* claim on/off 정책 명시 (코드 토글은 추후). 그래프 연결성과 무관해 비용 절감용으로 끔. */
     note:
       "<b>claim 추출</b> <span class=\"off-pill\">현재 OFF</span> — claim(면책·지급조건·정의 같은 산문 사실)은 " +
       "그래프 <b>연결성에는 영향이 없어</b>, 지금 단계에서는 LLM 비용을 아끼려 끈 채로 진행합니다. " +
       "필요할 때 다시 <b>ON</b> 으로 켤 수 있습니다(추출 2번째 패스 토글). " +
-      "<span class=\"note-cav\">※ 아래 그래프·claim_type 표는 claim 을 켠 v06 기준입니다.</span>",
+      "<span class=\"note-cav\">※ 최신 v07은 claim OFF 스냅샷(claims=0)입니다. 아래 claim_type 표는 claim 을 켠 v06 기준.</span>",
   },
 
   /* 전 버전 공통 파이프라인 (단계별 1줄) ----------------------------------- */
@@ -177,6 +177,31 @@ window.REPORT = {
       eval:
         "26문항 회귀 = PASS 23 / PARTIAL 3 / FAIL 0 (v0.4 21/5/0). 새로 통과한 2개 모두 v0.6의 직접 성과 — MH001(뇌졸중→분류코드를 한 홉에 도달)·Q-005(소멸시효가 깔끔한 엣지로 연결). 남은 PARTIAL 3개는 연결성 문제가 아니라 본문 claim을 덜 뽑은 recall 갭(Q-006·Q-007·GS003).",
     },
+    {
+      id: "v07",
+      title: "v07 — 눈으로 본 문제 수정: 숫자노드 클러터 + 열거 recall (claim OFF)",
+      date: "2026-06-22",
+      tag: "정리 + 열거 recall (스키마 변화 없음, claim OFF)",
+      goal:
+        "뷰어에서 육안으로 발견한 두 문제 — (1) 이름이 '36·1·2'인 '그냥 숫자' 노드, (2) 2~4노드 섬 — 을 오버핏·복잡구조 없이 고친다. claim은 OFF로 유지하고, Entity·Relationship으로 명확히 표현되는 것만 담는 방향을 굳혔다. 전부 재추출 1회 + resolve 변경으로 처리(enum·스키마 불변).",
+      schema: [
+        "스키마 변화 없음(Entity 8종·rel 13종 그대로). claim_type은 OFF라 미사용.",
+        "claim OFF 유지 — Pass3(Claim)·resolve claim 경로 생략(src/config.py EXTRACT_CLAIMS=False). 원문은 chunks에 보존.",
+      ],
+      changes: [
+        "숫자노드 정리(resolve): 별표 분류표 '행번호'(1|위,십이지장)·목차 '페이지번호'(보장명···101)를 evidence 모양으로 제거(drop_structural_numbers) + 지급률 값 '%' 복원(normalize_bare_numbers 완화). 엣지 종류가 아닌 evidence로 판정 — 재추출마다 바뀌는 오추출 엣지에 안 휘둘리게(행번호가 분류번호→조건으로 바뀐 회귀를 이 방식으로 차단).",
+        "열거 완전성(extract Pass1·2): 'A는 B,C,D를 제외/포함' 나열을 항목마다 entity+엣지로 강제('등' 금지). 영업일→토/일/공휴일/근로자의날 degree 1→6, 제외한다 58→94.",
+        "precision 게이트(resolve): link_table_rows가 별표를 Numeric값에 잇던 '별표1→60%' 값-포함 오류 254개 차단(값은 항목에 종속, 별표 멤버 아님). 그로 떠버린 죽은 값노드 118개 제거(drop_orphan_values, ontology '고립 수치=무의미' 원칙).",
+        "recall 탐지기 도구화(eval/_recall_probe.py): degree÷원문등장으로 gold 없이 under-connected 노드 발굴 → 섬을 5종류로 분류(대부분 정상 잎·claim-off 고아, 진짜 깨끗한 누락은 '열거 멤버'뿐).",
+      ],
+      problems: [
+        "claim OFF의 직격탄: 제5조류 면책·예외·통지의무 등 산문 사실은 그래프에 없음(gold 제5조 E-R recall 0/10). 고립 83개 다수가 이 때문(피보험자·가입금액·면책 위험행위 7종 등) — 연결성 결함이 아니라 토글 선택의 비용.",
+        "백로그: 제외한다 주어 오결합('전문의(치과의사 제외)'가 질병·상품에 결합)·방향 오류 일부, 별표6 중복표 14행 누락(별표5와 겹침), 수익자=보험수익자 분리(과병합 위험으로 보류).",
+        "지급률/조건 엣지 under-extraction — 값이 항목과 안 이어진 게 고립 값노드의 근본 원인(이번엔 제거로 정리, 근본은 추출 recall 과제).",
+      ],
+      eval:
+        "claim OFF라 26문항(claim 조회형 ~17/26)은 부적합 → gold E-R 슬라이스로 측정. 제8조(지급절차) 13/18(~72%) — 영업일 4종·가지급 50%·예외 6종 포착, v0.6에서 ⚠였던 제8조↔별표1-1(지연이자) 연결도 메워짐. 제5조(면책) 0/10 = claim-형 조문이라 예고된 정상. precision 샘플(rel별 40개): 조건 0.925 · 제외한다 0.775 · 포함한다 ~0.85(별표→Numeric 게이트 후).",
+    },
   ],
 
   /* 버전 간 변화 (Before → After) — 문제→수정→결과 ---------------------------
@@ -295,18 +320,44 @@ window.REPORT = {
         after: "별표2 -[포함한다]→ 분류표 행 766건 연결 + cross-ref가 정의된다/참조한다 엣지로 → 뇌졸중 -[분류번호]→ I60·I61 한 홉(MH001 PASS)",
       },
     },
+    {
+      from: "v06", to: "v07",
+      commit: "(2026-06-22)",
+      headline: "눈으로 본 문제 수정 — '그냥 숫자' 노드 정리 + 열거 연결, precision 게이트 (claim OFF 유지)",
+      problems: [
+        "뷰어 육안: 노드 이름이 '36·1·2' 같은 맨숫자 — 별표 장해표 행번호·목차 페이지번호가 값으로 오추출, 지급률 값엔 '%'도 빠짐",
+        "2~4노드 섬 — '영업일' 같은 용어가 '토/일/공휴일 제외' 열거를 거느리지 못함(토요일·공휴일이 노드조차 없음)",
+        "(검증 중 발견) link_table_rows가 별표를 숫자값에 이어 '별표1-포함한다->60%' 값-포함 오류 254개 → 포함한다 precision 0.70",
+      ],
+      fixes: [
+        "drop_structural_numbers + normalize_bare_numbers 완화: 행번호·목차번호 제거(evidence 모양 기반, 엣지 종류 무관), 지급률 % 복원",
+        "extract Pass1·2 열거 완전성: 나열 항목마다 entity+제외/포함 엣지 강제('등' 금지)",
+        "link_table_rows 게이트(별표→Numeric 차단) + drop_orphan_values(연결 없는 죽은 값노드 제거, ontology '고립 수치=무의미')",
+      ],
+      results: [
+        "맨숫자 클러터 노드 144→소수(진짜 값만 잔존: 지수 25·치아 14 등), 죽은 값노드 118 제거",
+        "영업일 degree 1→6(토/일/공휴일/근로자의날 EXCLUDES), 제외한다 58→94",
+        "별표→Numeric 포함 오류 254→0(포함한다 precision 0.70→~0.85), 고립 201→83(전부 의미 용어, 죽은 숫자 0)",
+        "gold 제8조 E-R recall ~72%(별표1-1 지연이자 연결 보강). ⚠ claim OFF로 제5조류 면책은 0/10 = 의도된 비용",
+      ],
+      example: {
+        title: "영업일 정의(열거 제외)",
+        before: "영업일 -[참조한다]→ 별표15 뿐. '토요일·일요일·공휴일·근로자의 날'은 노드조차 없음(열거가 '등'으로 뭉개짐)",
+        after: "영업일 -[제외한다]→ 토요일/일요일/공휴일/근로자의 날 (4종 전부 노드+엣지) — degree 1→6",
+      },
+    },
   ],
 
   /* 그래프 형태의 진화 (버전 간 정성 비교) -------------------------------- */
   graphEvolution: [
-    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)" },
-    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)" },
-    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)" },
-    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)" },
-    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)" },
-    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거" },
-    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%" },
-    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0" },
+    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)" },
+    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)" },
+    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)" },
+    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)" },
+    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)" },
+    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF" },
+    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)" },
+    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16" },
   ],
 
   /* 주요 결정 로그 ------------------------------------------------------- */
