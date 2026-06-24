@@ -21,7 +21,10 @@
     "claim_types": {
       "(none)": 596
     },
-    "doc_anchored_claims": 102
+    "doc_anchored_claims": 102,
+    "chunks": 0,
+    "from_chunk": 0,
+    "next_chunk": 0
   },
   "v02": {
     "label": "v02",
@@ -45,7 +48,10 @@
     "claim_types": {
       "(none)": 378
     },
-    "doc_anchored_claims": 34
+    "doc_anchored_claims": 34,
+    "chunks": 0,
+    "from_chunk": 0,
+    "next_chunk": 0
   },
   "v03": {
     "label": "v03",
@@ -69,7 +75,10 @@
     "claim_types": {
       "(none)": 642
     },
-    "doc_anchored_claims": 44
+    "doc_anchored_claims": 44,
+    "chunks": 0,
+    "from_chunk": 0,
+    "next_chunk": 0
   },
   "v05": {
     "label": "v05",
@@ -99,7 +108,10 @@
       "기타": 110,
       "해지·실효": 87
     },
-    "doc_anchored_claims": 0
+    "doc_anchored_claims": 0,
+    "chunks": 0,
+    "from_chunk": 0,
+    "next_chunk": 0
   },
   "v06": {
     "label": "v06",
@@ -130,7 +142,10 @@
       "납입·환급": 26,
       "해지·실효": 104
     },
-    "doc_anchored_claims": 0
+    "doc_anchored_claims": 0,
+    "chunks": 0,
+    "from_chunk": 0,
+    "next_chunk": 0
   },
   "v07": {
     "label": "v07",
@@ -153,6 +168,35 @@
       "Org": 26
     },
     "claim_types": {},
-    "doc_anchored_claims": 0
+    "doc_anchored_claims": 0,
+    "chunks": 0,
+    "from_chunk": 0,
+    "next_chunk": 0
+  },
+  "v08": {
+    "label": "v08",
+    "folder": "v08-quality-baseline",
+    "entities": 1139,
+    "relationships": 1667,
+    "claims": 0,
+    "sections": 36,
+    "dropped": 15,
+    "isolated": 105,
+    "rel_type_count": 12,
+    "entity_types": {
+      "Numeric": 7,
+      "Condition": 174,
+      "Date": 6,
+      "Code": 203,
+      "Concept": 632,
+      "Product": 68,
+      "Person": 24,
+      "Org": 25
+    },
+    "claim_types": {},
+    "doc_anchored_claims": 0,
+    "chunks": 114,
+    "from_chunk": 2297,
+    "next_chunk": 113
   }
 }

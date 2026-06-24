@@ -12,7 +12,7 @@
  * ==========================================================================*/
 window.REPORT = {
   meta: {
-    title: "doc2graph — 버전 변천사 보고서 (v01 → v07)",
+    title: "doc2graph — 버전 변천사 보고서 (v01 → v08)",
     doc: "대상 문서: MG손해보험 무배당 mg뉴파워보장보험 약관 (mg_new_power, 97p)",
   },
 
@@ -29,14 +29,14 @@ window.REPORT = {
       { k: "무엇을", v: "문서 한 건을 노드(개념·수치·코드) + 관계 + 근거 있는 claim 으로 이뤄진 그래프로." },
       { k: "어떻게", v: "무거운 프레임워크 없이 직접 구현 · 닫힌 스키마로 질의 가능하게 · 모든 노드·엣지에 원문 근거(evidence) 보존." },
       { k: "어디로", v: "지금은 약관 1건이지만, 다음 목표는 여러 문서·여러 도메인으로 확장하는 것(North Star)." },
-      { k: "지금",   v: "버전을 거치며 계속 고도화 중 — 아래에서 v01 → v07 의 변화와 현재 그래프를 직접 볼 수 있습니다." },
+      { k: "지금",   v: "버전을 거치며 계속 고도화 중 — 아래에서 v01 → v08 의 변화와 현재 그래프를 직접 볼 수 있습니다." },
     ],
     /* claim on/off 정책 명시 (코드 토글은 추후). 그래프 연결성과 무관해 비용 절감용으로 끔. */
     note:
       "<b>claim 추출</b> <span class=\"off-pill\">현재 OFF</span> — claim(면책·지급조건·정의 같은 산문 사실)은 " +
       "그래프 <b>연결성에는 영향이 없어</b>, 지금 단계에서는 LLM 비용을 아끼려 끈 채로 진행합니다. " +
       "필요할 때 다시 <b>ON</b> 으로 켤 수 있습니다(추출 2번째 패스 토글). " +
-      "<span class=\"note-cav\">※ 최신 v07은 claim OFF 스냅샷(claims=0)입니다. 아래 claim_type 표는 claim 을 켠 v06 기준.</span>",
+      "<span class=\"note-cav\">※ 최신 v08도 claim OFF 스냅샷(claims=0)입니다. claim 으로만 담기던 산문 사실은 v08의 <b>원문 lexical 층(Chunk 노드)</b>이 chunk.text 로 100% 보존·복원합니다. 아래 claim_type 표는 claim 을 켠 v06 기준.</span>",
   },
 
   /* 전 버전 공통 파이프라인 (단계별 1줄) ----------------------------------- */
@@ -202,6 +202,32 @@ window.REPORT = {
       eval:
         "claim OFF라 26문항(claim 조회형 ~17/26)은 부적합 → gold E-R 슬라이스로 측정. 제8조(지급절차) 13/18(~72%) — 영업일 4종·가지급 50%·예외 6종 포착, v0.6에서 ⚠였던 제8조↔별표1-1(지연이자) 연결도 메워짐. 제5조(면책) 0/10 = claim-형 조문이라 예고된 정상. precision 샘플(rel별 40개): 조건 0.925 · 제외한다 0.775 · 포함한다 ~0.85(별표→Numeric 게이트 후).",
     },
+    {
+      id: "v08",
+      title: "v08 — 스칼라 값 fold(속성화) + 원문 lexical 층(Chunk 노드)",
+      date: "2026-06-24",
+      tag: "표현 정리 + 원문 복원 층 (스키마 변화 없음, claim OFF)",
+      goal:
+        "두 가지를 더한다. (1) '1cm·50%·2' 같은 리터럴 스칼라를 독립 Numeric 노드 대신 host entity '속성'으로 흡수(fold) — 대표 GraphRAG 관행이고, 같은 값('50%')이 18개 노드로 안 합쳐져 '값 노드'의 역질의 이점이 실제로 없음을 데이터로 확인한 결과. (2) 원문 조각을 (:Chunk) 노드로 얹어(lexical 층) 추출이 못 뽑은 산문 문장까지 100% 복원 가능하게 + 모든 entity를 자기 출처 chunk에 FROM_CHUNK로 연결. resolve/load만 변경, 추출 스키마·enum 불변. claim은 OFF 유지.",
+      schema: [
+        "스키마 변화 없음(Entity 8종·rel enum 그대로). claim OFF 유지(claims=0).",
+        "스칼라 fold: 값-전용 Numeric 노드를 host 속성(value_attrs / PAY_RATE·PAY_AMOUNT·LIMIT)으로 흡수 → Numeric 노드 308→7. config.FOLD_SCALAR_VALUES 토글(resolve+load).",
+        "lexical 층: (:Chunk{text}) + (:Entity)-[:FROM_CHUNK]->(:Chunk) + (:Chunk)-[:NEXT_CHUNK]->(:Chunk) 순서 백본. config.BUILD_LEXICAL_GRAPH 토글(load만). 아래 뷰어도 chunks를 읽어 Chunk 노드(종이색 네모)·FROM_CHUNK·NEXT_CHUNK로 함께 표시(원문은 160자 미리보기, 전문은 Neo4j).",
+      ],
+      changes: [
+        "resolve.fold_scalar_values + load: 들어오는 값-엣지(지급률·지급금액·한도·조건-수치)만 가진 깨끗한 스칼라를 host 속성으로 흡수하고 노드+엣지 제거. evidence·page 100% 보존(value_attrs_json + PAY_RATE 등 flat 속성으로 '값 기준 역질의' 가능).",
+        "load lexical 블록: outputs/chunks를 (:Chunk) 노드로 적재(DETACH DELETE로 멱등 교체), entity sources의 실재 chunk_id로 FROM_CHUNK, 문서 순서로 NEXT_CHUNK 백본(chunk_id 숫자 파싱 정렬 — 1000+ 문자열정렬 깨짐 방지).",
+        "의미/출처 분리 규약: FROM_CHUNK/NEXT_CHUNK는 의미 카운트·고립 지표에서 제외(_appendix_probe 차수도 동일 수정). 의미 연결은 typed-edge가, 원문 복원은 chunk가 — 두 트랙 분리.",
+        "적대리뷰 5관점 통과(내 쪽 Neo4j 없어 Cypher 직접 실행 불가 → 리뷰로 대체) + 사용자 load 실행 후 원문 대조 검증(제30조 633~677행 한 글자 누락 0, 비-내용 마커만 정상 제거).",
+      ],
+      problems: [
+        "의미(semantic)-only 고립이 83→105로 늘었다 — fold가 값-엣지만 갖던 host를 갈 곳 없게 만든 부작용(+재추출 jitter). lexical이 '출처' 차원에선 전부 복원하지만 '의미 엣지' 차원 고립은 의도적으로 남겨 claim 트랙에서 다룬다.",
+        "의미 고립 105는 '의미 엣지' 기준 수치 — 뷰어에서 타입 필터의 Chunk를 끄면 이 105가 드러나고, 켜면 FROM_CHUNK로 전부 출처 원문에 연결된다(두 상태를 토글로 직접 비교 가능).",
+        "보류: 재-chunking(더 작게=추출 정확↑ vs 교차-chunk relation↓ sweet spot 측정), claim→chunk 직접 연결(claim-on 시), 조건 flat 속성 저가치 재검토.",
+      ],
+      eval:
+        "이번 스냅샷은 fold·lexical에 더해 추출 1회 재실행 포함(Condition 146→174 등 소폭은 LLM 비결정성). lexical 투영·load 리포트 기준: Chunk 114·FROM_CHUNK 2297·NEXT_CHUNK 113, 모든 entity가 chunk에 연결돼 출처 LCC 100%·원문 완전 복원. 원문 대조: '보험료의 자동대출납입' 구간(제30조) chunk.text가 원문과 1:1 일치.",
+    },
   ],
 
   /* 버전 간 변화 (Before → After) — 문제→수정→결과 ---------------------------
@@ -346,18 +372,44 @@ window.REPORT = {
         after: "영업일 -[제외한다]→ 토요일/일요일/공휴일/근로자의 날 (4종 전부 노드+엣지) — degree 1→6",
       },
     },
+    {
+      from: "v07", to: "v08",
+      commit: "(2026-06-24)",
+      headline: "값은 노드가 아니라 속성으로(fold) + 원문을 그래프에 얹다(lexical 층)",
+      problems: [
+        "'1cm·50%·2' 같은 리터럴 스칼라가 독립 Numeric 노드 308개 — 대표 KG와 다르고, 같은 값('50%')이 18개 노드로 안 합쳐져 '값 노드'의 역질의 이점이 실제로 없었다.",
+        "claim OFF의 직격탄: 추출이 entity·관계로 못 떨군 산문 문장(예: '회사는 자동대출납입 종료 15일 내 안내' 의무)이 그래프에서 통째로 소실 → '전화-음성녹음' 2노드 섬처럼 맥락 끊긴 고아 발생, 원문 추적조차 불가.",
+        "값에만 매달렸던 entity는 값 노드가 빠지면 갈 곳이 없어 고립.",
+      ],
+      fixes: [
+        "스칼라 fold(resolve.fold_scalar_values + load): 들어오는 값-엣지(지급률·지급금액·한도·조건-수치)만 가진 깨끗한 스칼라를 host 속성으로 흡수, 노드+엣지 제거. evidence·page 100% 보존(value_attrs_json + PAY_RATE/PAY_AMOUNT/LIMIT flat 속성 → 값 기준 역질의 가능). config.FOLD_SCALAR_VALUES.",
+        "lexical 층(load): outputs/chunks를 (:Chunk{text}) 노드로 적재, entity sources로 (:Entity)-[:FROM_CHUNK]->(:Chunk), 문서 순서로 (:Chunk)-[:NEXT_CHUNK]->(:Chunk). 추출이 놓친 문장도 chunk.text에 보존돼 완전 복원, 모든 entity가 출처 chunk에 연결. config.BUILD_LEXICAL_GRAPH.",
+        "의미/출처 분리 규약: FROM_CHUNK/NEXT_CHUNK는 의미 카운트·고립 지표에서 제외 — 의미 연결은 typed-edge가, 원문 복원은 chunk가 책임지는 두 트랙으로 분리.",
+      ],
+      results: [
+        "Numeric 노드 308→7(스칼라 ~301개가 속성으로 흡수), 엔티티 1410→1139·관계 2015→1667. 지급률은 엣지→속성으로 완전 이동(rel 타입 13→12). evidence는 한 건도 안 잃음.",
+        "lexical 층(뷰어에 종이색 Chunk 노드로 표시): Chunk 114·FROM_CHUNK 2297·NEXT_CHUNK 113 — 모든 entity가 chunk에 연결돼 '출처 기준' 연결성 100%, 원문 완전 복원. '보험료의 자동대출납입' 섬이 chunk_014로 복원돼 ⑤항 의무·'전화=음성녹음' 정의가 한 원문 조각에서 재회.",
+        "⚠ 의미(semantic)-only 고립은 83→105로 늘었다 — fold가 값-엣지만 갖던 host를 갈 곳 없게 만든 부작용 + 재추출 jitter. 뷰어에서 Chunk를 끄면 이 105가 드러나고, 켜면 FROM_CHUNK로 전부 연결된다. '의미 엣지' 고립은 의도적으로 남겨 claim 트랙에서 다룬다.",
+        "※ 이 스냅샷은 fold·lexical에 더해 추출 1회 재실행을 포함(Condition 146→174 등 소폭 변동은 LLM 비결정성).",
+      ],
+      example: {
+        title: "보험료의 자동대출납입 (원문 복원)",
+        before: "'전화 -[정의된다]→ 음성녹음' 2노드 섬 + '회사는 자동대출납입 종료 15일 내 안내' 의무 문장은 그래프에 아예 없음(claim OFF로 소실, 원문 추적 불가).",
+        after: "보험료의자동대출납입·전화·음성녹음이 모두 chunk_014에 FROM_CHUNK로 연결 — 제30조 ①~⑤·정의·제31조 전문이 chunk.text에 보존돼 한 글자도 안 빠지고 복원(원문 1:1 대조 검증 완료).",
+      },
+    },
   ],
 
   /* 그래프 형태의 진화 (버전 간 정성 비교) -------------------------------- */
   graphEvolution: [
-    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)" },
-    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)" },
-    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)" },
-    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)" },
-    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)" },
-    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF" },
-    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)" },
-    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16" },
+    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)", v08: "동일 + 원문 Chunk 노드 추가(lexical 층, load만)" },
+    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)", v08: "8종 (Numeric은 fold로 308→7)" },
+    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)", v08: "closed enum 12 (지급률 엣지→속성 fold) + 구조 FROM_CHUNK/NEXT_CHUNK" },
+    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)", v08: "OFF (claims=0) — 산문은 chunk.text로 보존" },
+    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)", v08: "— (claim 0)" },
+    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF", v08: "동일(Ent→Rel, claim OFF) + resolve fold·load lexical" },
+    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)", v08: "의미층 고립 105(fold 부작용)·출처층 chunk로 100%·원문 복원" },
+    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16", v08: "15" },
   ],
 
   /* 주요 결정 로그 ------------------------------------------------------- */
@@ -387,7 +439,11 @@ window.REPORT = {
     { title: "[v06] 측정 먼저 — 순진한 fix·오버핏 fix 폐기",
       detail: "coverage 묶기는 시뮬레이션상 100% 블롭(거대허브 재발), 별표 regex 스파인은 이 문서 전용(다도메인 North Star 위배)이라 손대기 전에 폐기. _connectivity/_appendix_probe/_claim_audit 가 '진짜 원인=claim이 연결을 먹음'을 가리킨 뒤에만 코드 수정." },
     { title: "[v06] chunk 노드는 만들지 않음 — sources_json 이 근거 역할",
-      detail: "노드·엣지마다 evidence(원문 인용)+page+chunk_id 가 sources_json 에 이미 들어 있어 근거(grounding) 요건을 충족한다. 별도 (:Chunk) 노드는 또 다른 허브만 만들 뿐이라 추가하지 않음." },
+      detail: "노드·엣지마다 evidence(원문 인용)+page+chunk_id 가 sources_json 에 이미 들어 있어 근거(grounding) 요건을 충족한다. 별도 (:Chunk) 노드는 또 다른 허브만 만들 뿐이라 추가하지 않음. ※ v08에서 의도적으로 반전 — 아래 참조." },
+    { title: "[v08] 스칼라 값은 노드가 아니라 host 속성으로(fold)",
+      detail: "'1cm·50%·2' 같은 리터럴 스칼라를 독립 Numeric 노드로 두는 건 대표 GraphRAG 관행과 다르다. '값 노드'의 유일한 명분은 '값 기준 역질의(50%인 항목 다 찾기)'인데, 실제로는 같은 '50%'가 18개 노드로 안 합쳐져 그 이점이 없었다. → 값-엣지만 가진 깨끗한 스칼라를 host entity 속성(value_attrs_json + PAY_RATE/PAY_AMOUNT/LIMIT)으로 흡수. evidence·page 보존, flat 속성으로 역질의는 오히려 정확해짐. resolve+load만, config.FOLD_SCALAR_VALUES 토글로 가역." },
+    { title: "[v08] 원문 chunk를 노드로 — v06 결정의 의도된 반전(grounding ≠ recovery)",
+      detail: "v06은 'sources_json이 근거를 충족하니 chunk 노드 불필요'라 봤다. 그 논리는 grounding(이미 뽑힌 노드·엣지의 출처)만 다뤘고 recovery(추출이 entity·관계로 아예 못 뽑은 산문 문장)를 놓쳤다 — 그런 문장은 노드 자체가 없어 sources_json이 붙을 곳도 없다(claim OFF의 '전화-음성녹음' 섬·15일 안내 의무 소실이 그 증거). chunk 노드는 다른 문제를 푼다: ①추출이 놓친 문장도 chunk.text로 100% 복원 ②모든 entity가 출처 chunk에 FROM_CHUNK로 붙어 출처 연결 100%. '또 다른 허브' 우려는 FROM_CHUNK/NEXT_CHUNK를 의미 지표에서 제외해 차단(MS GraphRAG text_units·Neo4j lexical graph 관행). load만 변경, config.BUILD_LEXICAL_GRAPH 토글." },
   ],
 
   /* 테스트 방법.  type = 채점 주체 구분:
@@ -395,26 +451,23 @@ window.REPORT = {
    *   "LLM-judge" = LLM 이 채점 (LLM-as-a-judge)
    *   "기계"      = 코드가 자동·결정적으로 측정/비교 (LLM 안 씀)            */
   tests: [
-    { name: "26문항 수동 Cypher 회귀", type: "육안",
-      file: "eval/manual_cypher_test.md (살아있는 정본)",
-      desc: "A·B(단순조회·조건정리)=오정보 0 감시 / C·D·E·F(비교·요약·확인불가·multi-hop)=전부 PASS 목표. 부재 판정은 entity+claim+edge 3중 검색 후에만." },
-    { name: "직접 육안 검토 (수동 spot-check)", type: "육안",
-      file: "그래프 뷰어(report) · Neo4j Browser · resolved.json",
-      desc: "추출 결과를 사람이 직접 눈으로 확인 — 그래프 뷰어에서 노드·엣지·evidence 를 훑고, 의심 가는 조항을 원문과 대조해 환각·누락·오병합을 spot-check. 자동화가 못 잡는 '말이 되나'를 사람이 판단." },
-    { name: "LLM-judge eval 5종", type: "LLM-judge",
-      file: "eval/01~05 폴더 README = 작업 지시서",
-      desc: "노드 coverage / 관계 정확·귀속 / 내용 보존 / 근거 provenance / 노이즈. 결과는 YYYY-MM-DD__agent__*.md, synthesis 후 원인별 수정." },
-    { name: "gold 슬라이스 대조", type: "육안",
-      file: "eval/gold/제2조·제5조·제8조",
-      desc: "스키마-라이트 gold 를 한 조항씩 사람이 만들어 우리 그래프와 대조 → recall 측정. 결론: 스키마는 충분, 병목은 recall." },
-    { name: "기계 불변식 게이트", type: "기계",
-      file: "eval/check_baseline.py",
-      desc: "토큰 0 구조 지표 diff(Section/dropped/coverage/orphan/ACME 등)를 매 단계 검증. LLM 평가가 놓치는 구조 결함 포착." },
-    { name: "회귀 러너", type: "기계",
-      file: "eval/run_eval.py",
-      desc: "md 문항별 cypher 블록 파싱 → Neo4j 읽기전용 실행 → eval/_results.md 덤프. baseline 과 행 단위 비교." },
-    { name: "[v06] 연결성 진단 스위트", type: "기계",
-      file: "eval/_connectivity*.py · _appendix_probe.py · _claim_audit.py",
-      desc: "connected component 수·degree 분포·고립률 측정(_connectivity), 순진한 fix 시뮬레이션(_connectivity_sim), 별표 행 고아 진단(_appendix_probe), 'claim이 연결을 먹는다' 확정(_claim_audit). 코드 수정 전 '측정 먼저' 게이트." },
+    { name: "실제 질문 26개로 그래프에 물어보기", type: "육안",
+      file: "약관을 보고 만든 26개 질문",
+      desc: "질문 26개(예: '소멸시효는 몇 년?', '청약철회는 언제까지 돼?', '암 진단비랑 유사암 진단비는 뭐가 달라?')를 만들어, 그래프가 그 답을 제대로 내놓는지 하나씩 확인합니다. 한 번에 찾는 단순한 질문부터 여러 정보를 이어 붙여야 답이 나오는 질문까지 골고루 넣어, 답을 못 하거나 없는 답을 지어내는 경우를 잡아냅니다." },
+    { name: "사람이 직접 눈으로 훑어보기", type: "육안",
+      file: "그래프 화면 ↔ 약관 원문 대조",
+      desc: "그래프를 화면에 띄워 항목과 연결을 직접 둘러보고, 수상한 곳은 약관 원문과 맞대 봅니다. 없는 내용을 지어냈는지, 빠뜨렸는지, 엉뚱한 것끼리 합쳐졌는지 — 자동 검사가 못 잡는 '이게 말이 되나?'를 사람이 판단합니다." },
+    { name: "다른 AI에게 채점 맡기기", type: "LLM-judge",
+      file: "다섯 관점 채점",
+      desc: "또 다른 AI에게 우리 그래프를 다섯 관점으로 채점하게 합니다 — 빠진 내용은 없나, 연결이 맞나, 원문 뜻이 잘 살아 있나, 근거가 달려 있나, 쓸데없는 잡음은 없나. 사람이 일일이 보기 힘든 많은 양을 빠르게 훑는 용도입니다." },
+    { name: "모범답안 만들어 맞춰보기", type: "육안",
+      file: "조항별 정답지",
+      desc: "모범답안을 직접 만든 뒤, 우리 그래프가 그만큼 담고 있는지 대조합니다. 그래프가 얼마나 빠짐없이 담았는지를 재는 용도입니다." },
+    { name: "핵심 숫자 자동 점검", type: "기계",
+      file: "버전마다 자동 비교",
+      desc: "버전을 고칠 때마다 핵심 숫자(항목 수, 끊긴 연결, 어디에도 안 이어진 외톨이 항목 등)를 코드가 자동으로 비교해, 의도치 않게 망가진 데가 없는지 점검합니다. 사람·AI 평가가 놓치기 쉬운 구조적 실수를 잡습니다." },
+    { name: "얼마나 잘 이어져 있나 측정", type: "기계",
+      file: "연결 상태 수치화",
+      desc: "그래프가 하나로 잘 이어져 있는지, 아니면 외딴 섬처럼 조각나 있는지를 숫자로 잽니다. 섬이 많으면 여러 정보를 이어서 답하기가 어려우므로, 고치기 전에 원인부터 측정하는 단계입니다." },  
   ],
 };
