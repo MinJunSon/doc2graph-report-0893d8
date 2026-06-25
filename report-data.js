@@ -12,7 +12,7 @@
  * ==========================================================================*/
 window.REPORT = {
   meta: {
-    title: "doc2graph — 버전 변천사 보고서 (v01 → v09)",
+    title: "doc2graph — 버전 변천사 보고서 (v01 → v10)",
     doc: "대상 문서: MG손해보험 무배당 mg뉴파워보장보험 약관 (mg_new_power, 97p)",
   },
 
@@ -425,18 +425,42 @@ window.REPORT = {
         after: "뇌졸중·급성심근경색증·간경변증·유사암·제자리암·뇌혈관질환 = 전부 Condition. 간·폐·갑상선·관상동맥·각막·심장 = Anatomy(신설). 같은 질병이면 항상 같은 type.",
       },
     },
+    {
+      from: "v09", to: "v10",
+      commit: "extract 프롬프트 개선 (2026-06-25)",
+      headline: "\"chunk 빼면 vector RAG 아닌가?\" — 의미층(E-R)이 스스로 더 이어지게 (외톨이 연결 recall)",
+      problems: [
+        "chunk를 빼고 보면 의미 엣지 0인 고립 노드가 96개 — 답이 늘 chunk.text 검색으로 떨어지면 graph가 아니라 vector RAG.",
+        "고립의 정체 3종: ①절차 예시 노이즈(경찰서·서류) ②연결돼야 하는데 추출이 엣지를 놓침(C77·치료비) ③산문 사실(청구권 시효·면책 사유).",
+      ],
+      fixes: [
+        "새 관계 타입은 안 만듦 — 기존 enum(한도·조건·제외한다·분류번호)이 이미 이 사실들을 표현함. 빠진 건 '타입'이 아니라 추출 recall이었다.",
+        "Pass 2 '외톨이 잇기' 지시: 관계에 안 쓰인 entity를 같은 chunk에서 한 번 더 연결. 단 근거 없으면 금지(노이즈 엣지보다 외톨이가 낫다).",
+        "Pass 1 정밀도 지시: 절차 예시로만 나열되는 외부기관·서류는 제외.",
+      ],
+      results: [
+        "고립 96→80, 의미 엣지 +40, 노이즈 entity −51. C77 분류번호 코드가 질병에 연결(고립 Code 1→0).",
+        "한계 정직: chunk 경계로 잘린 사실(심신상실)·상품 척추(MG뉴파워보장보험)는 이 레버로 안 됨 — 재-chunking·backbone은 별도.",
+        "결론: '0 근처'는 아니지만 의미층이 chunk에 덜 기대는 방향으로 한 걸음. 산문 사실은 여전히 chunk가 보존(claim 폐기 유지).",
+      ],
+      example: {
+        title: "고립 코드 C77 연결",
+        before: "C77 = 의미 엣지 0 (chunk에만 붙어 떠 있음). '분류번호 C77~C80' 문장을 추출이 엣지로 안 만듦.",
+        after: "(불명확·이차성 악성신생물)-[분류번호]->(C77). 같은 chunk 안 단서를 recall이 잡아 질병↔코드가 1-hop 연결.",
+      },
+    },
   ],
 
   /* 그래프 형태의 진화 (버전 간 정성 비교) -------------------------------- */
   graphEvolution: [
-    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)", v08: "동일 + 원문 Chunk 노드 추가(lexical 층, load만)", v09: "동일 (속성화 + Chunk lexical 유지)" },
-    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)", v08: "8종 (Numeric은 fold로 308→7)", v09: "9종 (Anatomy 신설 — 부위 분리)" },
-    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)", v08: "closed enum 12 (지급률 엣지→속성 fold) + 구조 FROM_CHUNK/NEXT_CHUNK", v09: "동일 + Rule B(조건부 값 재배선)" },
-    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)", v08: "OFF (claims=0) — 산문은 chunk.text로 보존", v09: "OFF (claims=0)" },
-    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)", v08: "— (claim 0)", v09: "— (claim 0)" },
-    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF", v08: "동일(Ent→Rel, claim OFF) + resolve fold·load lexical", v09: "동일 — 타입 라우팅을 Pass1(entity 타입 guideline)로 이동" },
-    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)", v08: "의미층 고립 105(fold 부작용)·출처층 chunk로 100%·원문 복원", v09: "의미층 고립 96·출처층 chunk 100%" },
-    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16", v08: "15", v09: "13" },
+    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)", v08: "동일 + 원문 Chunk 노드 추가(lexical 층, load만)", v09: "동일 (속성화 + Chunk lexical 유지)", v10: "동일 (속성화 + Chunk lexical 유지)" },
+    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)", v08: "8종 (Numeric은 fold로 308→7)", v09: "9종 (Anatomy 신설 — 부위 분리)", v10: "9종 (변화 없음)" },
+    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)", v08: "closed enum 12 (지급률 엣지→속성 fold) + 구조 FROM_CHUNK/NEXT_CHUNK", v09: "동일 + Rule B(조건부 값 재배선)", v10: "동일 (13 enum, 외톨이 recall만 강화)" },
+    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)", v08: "OFF (claims=0) — 산문은 chunk.text로 보존", v09: "OFF (claims=0)", v10: "OFF (claims=0)" },
+    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)", v08: "— (claim 0)", v09: "— (claim 0)", v10: "— (claim 0)" },
+    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF", v08: "동일(Ent→Rel, claim OFF) + resolve fold·load lexical", v09: "동일 — 타입 라우팅을 Pass1(entity 타입 guideline)로 이동", v10: "동일 + Pass1 정밀도·Pass2 외톨이 recall 프롬프트 보강" },
+    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)", v08: "의미층 고립 105(fold 부작용)·출처층 chunk로 100%·원문 복원", v09: "의미층 고립 96·출처층 chunk 100%", v10: "의미층 고립 80(−16)·출처층 chunk 100%" },
+    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16", v08: "15", v09: "13", v10: "17" },
   ],
 
   /* 주요 결정 로그 ------------------------------------------------------- */
@@ -471,6 +495,38 @@ window.REPORT = {
       detail: "'1cm·50%·2' 같은 리터럴 스칼라를 독립 Numeric 노드로 두는 건 대표 GraphRAG 관행과 다르다. '값 노드'의 유일한 명분은 '값 기준 역질의(50%인 항목 다 찾기)'인데, 실제로는 같은 '50%'가 18개 노드로 안 합쳐져 그 이점이 없었다. → 값-엣지만 가진 깨끗한 스칼라를 host entity 속성(value_attrs_json + PAY_RATE/PAY_AMOUNT/LIMIT)으로 흡수. evidence·page 보존, flat 속성으로 역질의는 오히려 정확해짐. resolve+load만, config.FOLD_SCALAR_VALUES 토글로 가역." },
     { title: "[v08] 원문 chunk를 노드로 — v06 결정의 의도된 반전(grounding ≠ recovery)",
       detail: "v06은 'sources_json이 근거를 충족하니 chunk 노드 불필요'라 봤다. 그 논리는 grounding(이미 뽑힌 노드·엣지의 출처)만 다뤘고 recovery(추출이 entity·관계로 아예 못 뽑은 산문 문장)를 놓쳤다 — 그런 문장은 노드 자체가 없어 sources_json이 붙을 곳도 없다(claim OFF의 '전화-음성녹음' 섬·15일 안내 의무 소실이 그 증거). chunk 노드는 다른 문제를 푼다: ①추출이 놓친 문장도 chunk.text로 100% 복원 ②모든 entity가 출처 chunk에 FROM_CHUNK로 붙어 출처 연결 100%. '또 다른 허브' 우려는 FROM_CHUNK/NEXT_CHUNK를 의미 지표에서 제외해 차단(MS GraphRAG text_units·Neo4j lexical graph 관행). load만 변경, config.BUILD_LEXICAL_GRAPH 토글." },
+  ],
+
+  /* 참고 논문 --------------------------------------------------------------- */
+  papers: [
+    {
+      title: "DocPolicyKG: A Lightweight LLM-Based Framework for Knowledge Graph Construction from Chinese Policy Documents",
+      venue: "CIKM",
+      year: "2025",
+      url: "https://doi.org/10.1145/3746252.3760904",
+      desc: "도메인 온톨로지와 경량 LLM을 결합해 계층 구조와 문맥 의존성이 강한 정책 문서에서 엔티티·관계 그래프를 구축한다. 약관처럼 규칙과 조건이 얽힌 문서에서도 닫힌 스키마와 도메인 지식을 활용하면 작은 모델로 실용적인 KG를 만들 수 있다는 참고 사례다.",
+    },
+    {
+      title: "Ontology Learning and Knowledge Graph Construction: A Comparison of Approaches and Their Impact on RAG Performance",
+      venue: "arXiv:2511.05991",
+      year: "2025",
+      url: "https://arxiv.org/abs/2511.05991",
+      desc: "벡터 RAG·GraphRAG·온톨로지 기반 KG-RAG를 비교해, 온톨로지와 원문 chunk 정보를 함께 보존한 그래프가 강한 검색 성능을 보인다고 보고한다. 우리 프로젝트의 타입 스키마와 Chunk lexical 층을 함께 유지하는 설계를 뒷받침한다.",
+    },
+    {
+      title: "OG-RAG: Ontology-Grounded Retrieval-Augmented Generation For Large Language Models",
+      venue: "arXiv:2412.15235",
+      year: "2024",
+      url: "https://arxiv.org/abs/2412.15235",
+      desc: "도메인 온톨로지로 사실 묶음을 hypergraph에 구성하고, 질문에 필요한 최소 사실 집합을 골라 LLM 문맥으로 제공한다. 약관 질의에서도 단순 유사도 검색보다 엔티티 관계와 규칙 구조를 따라 필요한 근거만 모으는 retrieval이 중요하다는 방향을 제시한다.",
+    },
+    {
+      title: "StructuGraphRAG: Structured Document-Informed Knowledge Graphs for Retrieval-Augmented Generation",
+      venue: "AAAI Symposium Series",
+      year: "2024",
+      url: "https://doi.org/10.1609/aaaiss.v4i1.31798",
+      desc: "문서의 장·절 등 구조를 활용해 엔티티와 관계를 추출하고 KG-RAG의 정확성·포괄성·문맥 적합성을 높인다. PDF를 평평한 텍스트로만 보지 않고 문서 구조를 파싱·chunk·그래프 구성 전 과정에 보존해야 한다는 점이 우리 파이프라인과 직접 맞닿아 있다.",
+    },
   ],
 
   /* 테스트 방법.  type = 채점 주체 구분:

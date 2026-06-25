@@ -225,5 +225,32 @@
     "chunks": 114,
     "from_chunk": 2778,
     "next_chunk": 113
+  },
+  "v10": {
+    "label": "v10",
+    "folder": "v10-quality-baseline",
+    "entities": 1214,
+    "relationships": 2075,
+    "claims": 0,
+    "sections": 36,
+    "dropped": 17,
+    "isolated": 80,
+    "rel_type_count": 12,
+    "entity_types": {
+      "Numeric": 7,
+      "Condition": 405,
+      "Concept": 321,
+      "Date": 16,
+      "Anatomy": 157,
+      "Product": 41,
+      "Person": 24,
+      "Code": 202,
+      "Org": 41
+    },
+    "claim_types": {},
+    "doc_anchored_claims": 0,
+    "chunks": 114,
+    "from_chunk": 2631,
+    "next_chunk": 113
   }
 }
