@@ -203,7 +203,7 @@
     <h2>그래프 뷰어 <span class="pill">resolved.json 실데이터</span></h2>
     <p class="muted">버전 버튼으로 그래프 형태를 비교하세요. 드래그=이동, 휠=줌, 노드 클릭=오른쪽 상세.
        1000~2000 노드라 처음 안정화에 몇 초 걸립니다 — 타입/claim 필터로 줄이면 가벼워집니다.
-       <br><b>v08</b>은 원문 lexical 층을 함께 표시합니다 — <b>종이색 네모 = 원문 Chunk 노드</b>,
+       <br><b>v08·v09</b>는 원문 lexical 층을 함께 표시합니다 — <b>종이색 네모 = 원문 Chunk 노드</b>,
        <b>흐린 점선 = FROM_CHUNK</b>(entity가 나온 원문 조각), <b>진한 점선 = NEXT_CHUNK</b>(원문 순서 백본).
        타입 필터에서 <b>Chunk를 끄면</b> 순수 의미 그래프(고립 노드가 다시 드러남)를, <b>켜면</b> 모든 entity가
        출처 원문에 연결되는 모습을 볼 수 있습니다. 클릭하면 그 chunk의 원문 미리보기가 오른쪽에 뜹니다.</p>
@@ -272,14 +272,15 @@
 <script src="data/graph-v06.js"></script>
 <script src="data/graph-v07.js"></script>
 <script src="data/graph-v08.js"></script>
+<script src="data/graph-v09.js"></script>
 <script>
 "use strict";
 const R = window.REPORT, G = window.GRAPHS;
 const VERS = R.versions.map(v => v.id);          // ["v01","v02","v03","v05","v06","v07","v08"]
 const LATEST = VERS[VERS.length - 1];            // "v08" — 최신 버전(뷰어 초기값·claim_type 표 기준)
 const TYPE_COLORS = {Person:"#e57373",Org:"#ba68c8",Product:"#4db6ac",Concept:"#64b5f6",
-  Condition:"#ffb74d",Numeric:"#90a4ae",Date:"#a1887f",Code:"#9ccc65",Claim:"#f06292",
-  Document:"#455a64",Chunk:"#d6c79b",Unknown:"#bbb"};   // Chunk=원문 조각(종이색)
+  Condition:"#ffb74d",Anatomy:"#4dd0e1",Numeric:"#90a4ae",Date:"#a1887f",Code:"#9ccc65",Claim:"#f06292",
+  Document:"#455a64",Chunk:"#d6c79b",Unknown:"#bbb"};   // Anatomy=신체부위(청록), Chunk=원문 조각(종이색)
 // 엣지 종류별 스타일(c=평소색, h=하이라이트, d=점선). 의미 엣지(REL)는 기본 회색.
 //  HAS_CLAIM=핑크점선 · FROM_CHUNK=출처연결(흐릿한 점선) · NEXT_CHUNK=원문 순서 백본(보이는 점선)
 const EDGE_STYLE = {
@@ -417,7 +418,7 @@ document.getElementById("statTable").innerHTML =
   metricRow("└ FROM_CHUNK 엣지(출처 연결)", s=>s.from_chunk||"–")+
   `</tbody>`;
 
-const allTypes = ["Person","Org","Product","Concept","Condition","Numeric","Date","Code"];
+const allTypes = ["Person","Org","Product","Concept","Condition","Anatomy","Numeric","Date","Code"];
 document.getElementById("typeTable").innerHTML =
   `<thead><tr><th>타입</th>${VERS.map(v=>`<th class="num">${v}</th>`).join("")}</tr></thead><tbody>`+
   allTypes.map(t=>`<tr><td><span class="pill" style="background:${TYPE_COLORS[t]}22;color:${TYPE_COLORS[t]}">${t}</span></td>`+

@@ -12,7 +12,7 @@
  * ==========================================================================*/
 window.REPORT = {
   meta: {
-    title: "doc2graph — 버전 변천사 보고서 (v01 → v08)",
+    title: "doc2graph — 버전 변천사 보고서 (v01 → v09)",
     doc: "대상 문서: MG손해보험 무배당 mg뉴파워보장보험 약관 (mg_new_power, 97p)",
   },
 
@@ -228,6 +228,31 @@ window.REPORT = {
       eval:
         "이번 스냅샷은 fold·lexical에 더해 추출 1회 재실행 포함(Condition 146→174 등 소폭은 LLM 비결정성). lexical 투영·load 리포트 기준: Chunk 114·FROM_CHUNK 2297·NEXT_CHUNK 113, 모든 entity가 chunk에 연결돼 출처 LCC 100%·원문 완전 복원. 원문 대조: '보험료의 자동대출납입' 구간(제30조) chunk.text가 원문과 1:1 일치.",
     },
+    {
+      id: "v09",
+      title: "v09 — 온톨로지 정리: 타입 분해 + Anatomy 신설 + 조건부 값 재배선",
+      date: "2026-06-25",
+      tag: "타입 충실도 (Entity 8→9종, claim OFF)",
+      goal:
+        "26문항 점수가 아니라 '원문을 더 정확한 타입으로 KG화'하는 데 집중했다. 다중에이전트 리서치(60 agents, 54근거 중 23검증/31기각)로 근거를 잡고 사용자 승인 후 적용. 핵심 발견: entity 타입을 '결정'하는 건 Pass1인데, '질병은 Condition' 같은 라우팅 규칙이 prompt_guide(Pass2 전용)에 있어 Pass1이 본 적이 없었다 → Concept 731에 질병이 잔류한 구조적 원인. 라우팅 규칙을 entity 타입 guideline으로 옮긴 게(Pass1이 봄) Concept 분해를 실제 동작시킨 진짜 레버.",
+      schema: [
+        "Entity 8→9종: 신규 Anatomy(신체부위·장기) 추가. 질병·장해상태→Condition, 부위→Anatomy, 코드→Code, 수치→Numeric로 라우팅(common.json 타입 guideline). 순수 명명 용어만 Concept.",
+        "claim OFF 유지(claims=0). fold·lexical 토글 v08과 동일. 추출 스키마는 ontology JSON에서 자동 생성 → extract.py 코드 무변경, 변경은 common.json·insurance.json·resolve.py뿐.",
+        "Code 누출 차단(보험): 분류코드 꼴 이름은 LLM 타입과 무관하게 Code 확정(resolve.is_code_name). 이 스냅샷은 양쪽 누출 0이라 무변경이나 미래 재추출 안전장치.",
+      ],
+      changes: [
+        "Concept 분해(라우팅 버그 수정): 라우팅 규칙을 Pass2 prompt_guide → Pass1이 보는 entity 타입 guideline/counter_example로 이동. 결과 질병류가 일관되게 Condition으로 — v08은 암·갑상선암만 Condition이고 뇌졸중·급성심근경색증·간경변증·유사암·제자리암·뇌혈관질환은 Concept였다.",
+        "Anatomy 신설: 간·폐·갑상선·관상동맥·고관절·각막·심장 등 151개를 Concept에서 분리. 장해·수술 분류표의 부위가 질병·일반용어와 안 섞인다.",
+        "Rule B(조건부 값 재배선, resolve): 같은 표 행 evidence를 공유하는 (조건)과 (값)을 값엣지 source를 host→조건 노드로 옮긴다(W3C n-ary reification). single-host 가드로 '1년이상' 같은 공유 일반조건은 제외(슈퍼노드 오염 방지). 산출은 작고 run마다 변하는 보정.",
+      ],
+      problems: [
+        "★ 담보명 타입 회귀(수용함): 질병명을 포함한 담보명(뇌졸중진단비·급성심근경색증진단비·간편고지 암수술비 등 ~15개)이 v08 Product → v09 Concept로 빠졌다(질병→Condition 라우팅 부작용). 이름·엣지 질의는 정상(플랜구성·지급률 작동 확인), :Product 라벨 필터 질의만 일부 놓침. 급부접미사→Product 결정적 retype으로 무료 복구 가능하나, 이번 baseline은 회귀를 알고 수용한 채 동결(사용자 결정).",
+        "OCR 토막 리스트 = 천장: 제16조 알릴의무 4호(직업/직무·운전목적·운전여부·이륜자동차)가 여전히 안 묶임(직업·직무 deg=0). 원문에서 정의 박스가 호 사이에 끼어 리스트가 물리적으로 쪼개진 게 원인 — parse 층 문제라 재추출로 불가.",
+        "상호참조 누출 ≈39엣지(2%): '제1절 공통조항 제9조'·'법 제32조'가 entity가 돼 무의미 엣지 생성(조항필터가 '제N절…제N조'·'법 제…'를 못 잡음). 결정적 필터 확장으로 싸게 제거 가능(미적용).",
+      ],
+      eval:
+        "v08 대조(원문 충실도 중심): Concept 632→368, Condition 174→401, Anatomy 0→151, 의미 엣지 1667→2035(+368), 의미 고립 105→96. 질병 타입 일관화·부위 분리가 핵심 개선. 26문항(eval/_results.md)은 ≈20/3/3로 v08과 동급 — 점수는 안 움직였고 그게 정상(이미 천장: 원문에 없는 수수료·앱 / OCR손상 알릴의무). 사용성: 하이브리드(lexical+semantic) GraphRAG 기반은 쓸만함(원문 100% 보존·grounding·구조질의), 순수 traversal 추론은 아직 부족(일반host 혼입·상호참조 누출·OCR 토막) → evidence를 진실 source, 그래프는 항법·필터로(MS GraphRAG 방식).",
+    },
   ],
 
   /* 버전 간 변화 (Before → After) — 문제→수정→결과 ---------------------------
@@ -398,18 +423,44 @@ window.REPORT = {
         after: "보험료의자동대출납입·전화·음성녹음이 모두 chunk_014에 FROM_CHUNK로 연결 — 제30조 ①~⑤·정의·제31조 전문이 chunk.text에 보존돼 한 글자도 안 빠지고 복원(원문 1:1 대조 검증 완료).",
       },
     },
+    {
+      from: "v08", to: "v09",
+      commit: "v09-quality-baseline 동결 (2026-06-25)",
+      headline: "타입을 '결정'하는 자리를 고치다 — Concept 분해 + Anatomy 신설",
+      problems: [
+        "Concept 632가 잡탕 — 질병(뇌졸중·간경변증)·신체부위(간·폐)·명명 용어(이율)가 한 타입에 섞여 그래프 질의가 흐려짐.",
+        "질병 타입 불일치: 같은 질병류인데 암·갑상선암은 Condition인데 뇌졸중·급성심근경색증·유사암·제자리암·뇌혈관질환은 Concept(타입이 chunk마다 갈림).",
+        "구조적 원인: '질병은 Condition' 라우팅 규칙이 prompt_guide(Pass2 전용)에 있어 타입을 결정하는 Pass1이 본 적이 없었다.",
+      ],
+      fixes: [
+        "라우팅 규칙을 Pass2 prompt_guide → Pass1이 보는 entity 타입 guideline/counter_example로 이동(common.json). 질병→Condition·부위→Anatomy·코드→Code 라우팅이 타입 결정 단계에 도달.",
+        "Anatomy 타입 신설(8→9종): 신체부위·장기·조직을 Concept에서 분리.",
+        "Rule B(resolve): 같은 표 행의 (조건)+(값)을 값엣지 source를 host→조건 노드로 재배선(single-host 가드). Code 누출 차단(is_code_name)도 추가.",
+      ],
+      results: [
+        "Concept 632→368(분해), Condition 174→401(질병 흡수·일관), Anatomy 0→151(부위 분리).",
+        "의미 엣지 1667→2035(+368), 의미 고립 105→96. 분류표 부위 연결 등으로 그래프가 더 촘촘.",
+        "26문항은 ≈20/3/3로 v08 동급 — 점수가 아니라 타입 충실도가 올라간 버전(이미 천장).",
+        "⚠ 회귀(수용): 질병명 포함 담보명(뇌졸중진단비 등 ~15개)이 Product→Concept로 빠짐. 이름·엣지 질의는 정상, :Product 필터만 일부 놓침. 무료 retype 복구는 v10 1순위.",
+      ],
+      example: {
+        title: "질병·부위 타입 일관화",
+        before: "뇌졸중·급성심근경색증·간경변증 = Concept (암·갑상선암만 Condition). 간·폐·갑상선 = Concept. 같은 종류가 제멋대로.",
+        after: "뇌졸중·급성심근경색증·간경변증·유사암·제자리암·뇌혈관질환 = 전부 Condition. 간·폐·갑상선·관상동맥·고관절·각막·심장 = Anatomy(신설). 같은 질병이면 항상 같은 타입.",
+      },
+    },
   ],
 
   /* 그래프 형태의 진화 (버전 간 정성 비교) -------------------------------- */
   graphEvolution: [
-    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)", v08: "동일 + 원문 Chunk 노드 추가(lexical 층, load만)" },
-    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)", v08: "8종 (Numeric은 fold로 308→7)" },
-    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)", v08: "closed enum 12 (지급률 엣지→속성 fold) + 구조 FROM_CHUNK/NEXT_CHUNK" },
-    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)", v08: "OFF (claims=0) — 산문은 chunk.text로 보존" },
-    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)", v08: "— (claim 0)" },
-    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF", v08: "동일(Ent→Rel, claim OFF) + resolve fold·load lexical" },
-    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)", v08: "의미층 고립 105(fold 부작용)·출처층 chunk로 100%·원문 복원" },
-    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16", v08: "15" },
+    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)", v08: "동일 + 원문 Chunk 노드 추가(lexical 층, load만)", v09: "동일 (속성화 + Chunk lexical 유지)" },
+    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)", v08: "8종 (Numeric은 fold로 308→7)", v09: "9종 (Anatomy 신설 — 부위 분리)" },
+    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)", v08: "closed enum 12 (지급률 엣지→속성 fold) + 구조 FROM_CHUNK/NEXT_CHUNK", v09: "동일 + Rule B(조건부 값 재배선)" },
+    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)", v08: "OFF (claims=0) — 산문은 chunk.text로 보존", v09: "OFF (claims=0)" },
+    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)", v08: "— (claim 0)", v09: "— (claim 0)" },
+    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF", v08: "동일(Ent→Rel, claim OFF) + resolve fold·load lexical", v09: "동일 — 타입 라우팅을 Pass1(entity 타입 guideline)로 이동" },
+    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)", v08: "의미층 고립 105(fold 부작용)·출처층 chunk로 100%·원문 복원", v09: "의미층 고립 96·출처층 chunk 100%" },
+    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16", v08: "15", v09: "13" },
   ],
 
   /* 주요 결정 로그 ------------------------------------------------------- */

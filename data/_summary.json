@@ -198,5 +198,32 @@
     "chunks": 114,
     "from_chunk": 2297,
     "next_chunk": 113
+  },
+  "v09": {
+    "label": "v09",
+    "folder": "v09-quality-baseline",
+    "entities": 1265,
+    "relationships": 2035,
+    "claims": 0,
+    "sections": 36,
+    "dropped": 22,
+    "isolated": 96,
+    "rel_type_count": 12,
+    "entity_types": {
+      "Numeric": 16,
+      "Condition": 401,
+      "Date": 18,
+      "Product": 47,
+      "Person": 24,
+      "Code": 201,
+      "Concept": 368,
+      "Anatomy": 151,
+      "Org": 39
+    },
+    "claim_types": {},
+    "doc_anchored_claims": 0,
+    "chunks": 114,
+    "from_chunk": 2778,
+    "next_chunk": 113
   }
 }
