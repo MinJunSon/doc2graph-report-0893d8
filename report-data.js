@@ -12,7 +12,7 @@
  * ==========================================================================*/
 window.REPORT = {
   meta: {
-    title: "doc2graph — 버전 변천사 보고서 (v01 → v10)",
+    title: "doc2graph — 버전 변천사 보고서 (v01 → v09)",
     doc: "대상 문서: MG손해보험 무배당 mg뉴파워보장보험 약관 (mg_new_power, 97p)",
   },
 
@@ -229,12 +229,12 @@ window.REPORT = {
         "Rule B: 같은 표 행의 (조건)과 (값)을 한 노드로 묶음 — 예: '지급 91일 이후 → 가산이율 8%'를 한 노드가 답하게",
       ],
       problems: [
-        "★ 회귀(수용함): 질병명이 든 담보명(뇌졸중진단비 등 ~15개)이 Product → Concept로 빠졌다(질병→Condition 라우팅의 부작용). 이름·엣지 질의는 정상이고 :Product type 필터만 일부 놓침 — v10에서 무료로 복구 예정.",
+        "★ 회귀(수용함): 질병명이 든 담보명(뇌졸중진단비 등 ~15개)이 Product → Concept로 빠졌다(질병→Condition 라우팅의 부작용). 이름·엣지 질의는 정상이고 :Product type 필터만 일부 놓침 — 다음 버전에서 무료로 복구 예정.",
         "OCR 천장: 제16조 '알릴 의무' 4개 항목이 원문에서 정의 박스에 끼여 토막나 안 묶임(parse 단계 문제 — 재추출로 불가).",
         "상호참조 누출 ~39엣지(2%): 법조문 번호('제1절 공통조항 제9조'·'법 제32조')가 노드가 돼 무의미 엣지 생성.",
       ],
       eval:
-        "v08 대조(원문 충실도): Concept 632→368, Condition 174→401, Anatomy 0→151, 의미 엣지 +368. 질병 type 일관화·부위 분리가 핵심. 26문항은 v08과 동급(≈20/3/3) — 점수는 안 움직였고 그게 정상(이미 천장: 원문에 없는 수수료·앱, OCR 손상 알릴의무). 결론: lexical+semantic 하이브리드 GraphRAG로는 쓸만, 순수 traversal 추론엔 아직 evidence 동반이 필요(MS GraphRAG 방식).",
+        "v08 대조(원문 충실도): Concept 632→321, Condition 174→405, Anatomy 0→157, 의미 엣지 +408. 질병 type 일관화·부위 분리가 핵심. 26문항은 v08과 동급(≈20/3/3) — 점수는 안 움직였고 그게 정상(이미 천장: 원문에 없는 수수료·앱, OCR 손상 알릴의무). 결론: lexical+semantic 하이브리드 GraphRAG로는 쓸만, 순수 traversal 추론엔 아직 evidence 동반이 필요(MS GraphRAG 방식).",
     },
   ],
 
@@ -414,10 +414,10 @@ window.REPORT = {
         "Rule B: 같은 표 행의 (조건)과 (값)을 한 노드로 묶음 — 예: '지급 91일 이후 → 가산이율 8%'를 한 노드가 답하게.",
       ],
       results: [
-        "Concept 632→368(잡탕 분해), Condition 174→401(질병이 일관되게 모임), Anatomy 0→151(부위 분리).",
-        "의미 엣지 1667→2035(+368), 고립 105→96.",
+        "Concept 632→321(잡탕 분해), Condition 174→405(질병이 일관되게 모임), Anatomy 0→157(부위 분리).",
+        "의미 엣지 1667→2075(+408), 고립 105→80.",
         "26문항은 v08과 동급(≈20/3/3) — 점수가 아니라 'type 충실도(원문을 정확한 type으로)'가 오른 버전. 26문항은 이미 천장.",
-        "⚠ 회귀(수용함): 질병명이 든 담보명(뇌졸중진단비 등 ~15개)이 Product → Concept로 빠짐. 이름·엣지 질의는 정상이고 :Product type 필터만 일부 놓침 — v10에서 무료 복구 예정.",
+        "⚠ 회귀(수용함): 질병명이 든 담보명(뇌졸중진단비 등 ~15개)이 Product → Concept로 빠짐. 이름·엣지 질의는 정상이고 :Product type 필터만 일부 놓침 — 다음 버전에서 무료 복구 예정.",
       ],
       example: {
         title: "질병·부위 type 일관화",
@@ -425,42 +425,18 @@ window.REPORT = {
         after: "뇌졸중·급성심근경색증·간경변증·유사암·제자리암·뇌혈관질환 = 전부 Condition. 간·폐·갑상선·관상동맥·각막·심장 = Anatomy(신설). 같은 질병이면 항상 같은 type.",
       },
     },
-    {
-      from: "v09", to: "v10",
-      commit: "extract 프롬프트 개선 (2026-06-25)",
-      headline: "\"chunk 빼면 vector RAG 아닌가?\" — 의미층(E-R)이 스스로 더 이어지게 (외톨이 연결 recall)",
-      problems: [
-        "chunk를 빼고 보면 의미 엣지 0인 고립 노드가 96개 — 답이 늘 chunk.text 검색으로 떨어지면 graph가 아니라 vector RAG.",
-        "고립의 정체 3종: ①절차 예시 노이즈(경찰서·서류) ②연결돼야 하는데 추출이 엣지를 놓침(C77·치료비) ③산문 사실(청구권 시효·면책 사유).",
-      ],
-      fixes: [
-        "새 관계 타입은 안 만듦 — 기존 enum(한도·조건·제외한다·분류번호)이 이미 이 사실들을 표현함. 빠진 건 '타입'이 아니라 추출 recall이었다.",
-        "Pass 2 '외톨이 잇기' 지시: 관계에 안 쓰인 entity를 같은 chunk에서 한 번 더 연결. 단 근거 없으면 금지(노이즈 엣지보다 외톨이가 낫다).",
-        "Pass 1 정밀도 지시: 절차 예시로만 나열되는 외부기관·서류는 제외.",
-      ],
-      results: [
-        "고립 96→80, 의미 엣지 +40, 노이즈 entity −51. C77 분류번호 코드가 질병에 연결(고립 Code 1→0).",
-        "한계 정직: chunk 경계로 잘린 사실(심신상실)·상품 척추(MG뉴파워보장보험)는 이 레버로 안 됨 — 재-chunking·backbone은 별도.",
-        "결론: '0 근처'는 아니지만 의미층이 chunk에 덜 기대는 방향으로 한 걸음. 산문 사실은 여전히 chunk가 보존(claim 폐기 유지).",
-      ],
-      example: {
-        title: "고립 코드 C77 연결",
-        before: "C77 = 의미 엣지 0 (chunk에만 붙어 떠 있음). '분류번호 C77~C80' 문장을 추출이 엣지로 안 만듦.",
-        after: "(불명확·이차성 악성신생물)-[분류번호]->(C77). 같은 chunk 안 단서를 recall이 잡아 질병↔코드가 1-hop 연결.",
-      },
-    },
   ],
 
   /* 그래프 형태의 진화 (버전 간 정성 비교) -------------------------------- */
   graphEvolution: [
-    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)", v08: "동일 + 원문 Chunk 노드 추가(lexical 층, load만)", v09: "동일 (속성화 + Chunk lexical 유지)", v10: "동일 (속성화 + Chunk lexical 유지)" },
-    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)", v08: "8종 (Numeric은 fold로 308→7)", v09: "9종 (Anatomy 신설 — 부위 분리)", v10: "9종 (변화 없음)" },
-    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)", v08: "closed enum 12 (지급률 엣지→속성 fold) + 구조 FROM_CHUNK/NEXT_CHUNK", v09: "동일 + Rule B(조건부 값 재배선)", v10: "동일 (13 enum, 외톨이 recall만 강화)" },
-    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)", v08: "OFF (claims=0) — 산문은 chunk.text로 보존", v09: "OFF (claims=0)", v10: "OFF (claims=0)" },
-    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)", v08: "— (claim 0)", v09: "— (claim 0)", v10: "— (claim 0)" },
-    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF", v08: "동일(Ent→Rel, claim OFF) + resolve fold·load lexical", v09: "동일 — 타입 라우팅을 Pass1(entity 타입 guideline)로 이동", v10: "동일 + Pass1 정밀도·Pass2 외톨이 recall 프롬프트 보강" },
-    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)", v08: "의미층 고립 105(fold 부작용)·출처층 chunk로 100%·원문 복원", v09: "의미층 고립 96·출처층 chunk 100%", v10: "의미층 고립 80(−16)·출처층 chunk 100%" },
-    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16", v08: "15", v09: "13", v10: "17" },
+    { aspect: "구조(Section)",   v01: "flat, 섹션 없음", v02: "Section 22 백본", v03: "Section 22 유지", v05: "Section 노드 제거 → 속성화(coverage 36)", v06: "동일 (속성화 유지)", v07: "동일 (속성화 유지)", v08: "동일 + 원문 Chunk 노드 추가(lexical 층, load만)", v09: "동일 (속성화 + Chunk lexical 유지)" },
+    { aspect: "Entity 타입 수",  v01: "7종", v02: "7종", v03: "7종", v05: "8종 (Code 추가, Date 흡수)", v06: "8종 (변화 없음)", v07: "8종 (변화 없음)", v08: "8종 (Numeric은 fold로 308→7)", v09: "9종 (Anatomy 신설 — 부위 분리)" },
+    { aspect: "Relationship",    v01: "open(자유)", v02: "closed enum 12", v03: "closed enum 12", v05: "closed enum 13", v06: "closed enum 13 (cross-ref를 엣지로 회수)", v07: "closed enum 13 (열거 멤버 강제)", v08: "closed enum 12 (지급률 엣지→속성 fold) + 구조 FROM_CHUNK/NEXT_CHUNK", v09: "동일 + Rule B(조건부 값 재배선)" },
+    { aspect: "Claim",           v01: "subject/text", v02: "subject/text", v03: "subject/text", v05: "+ claim_type(7종)·object", v06: "참고용 잎 (연결 안 함)", v07: "OFF (미추출, claims=0)", v08: "OFF (claims=0) — 산문은 chunk.text로 보존", v09: "OFF (claims=0)" },
+    { aspect: "Claim 앵커",      v01: "102 → Document", v02: "34 → Document", v03: "44 → Document", v05: "전부 Entity (Document 제거)", v06: "전부 Entity (HAS_CLAIM)", v07: "— (claim 0)", v08: "— (claim 0)", v09: "— (claim 0)" },
+    { aspect: "추출 방식",       v01: "단일 호출", v02: "단일 호출", v03: "단일 + glean", v05: "단일 + glean", v06: "2-패스(Ent+Rel→Claim), glean 제거", v07: "타입별 패스(Ent→Rel), Pass3(claim) OFF", v08: "동일(Ent→Rel, claim OFF) + resolve fold·load lexical", v09: "동일 — 타입 라우팅을 Pass1(entity 타입 guideline)로 이동" },
+    { aspect: "연결성(섬·LCC)", v01: "고립 291", v02: "고립 275", v03: "고립 148(Section 백본이 가림)", v05: "섬 457·LCC 21.6%(de-hub로 파편화 노출)", v06: "섬 165·LCC 79.2%", v07: "섬 109·LCC 82.7%(죽은 값노드 정리)", v08: "의미층 고립 105(fold 부작용)·출처층 chunk로 100%·원문 복원", v09: "의미층 고립 80·출처층 chunk 100%" },
+    { aspect: "dangling drop",   v01: "28", v02: "182", v03: "39", v05: "0", v06: "0", v07: "16", v08: "15", v09: "17" },
   ],
 
   /* 주요 결정 로그 ------------------------------------------------------- */
